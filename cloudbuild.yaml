@@ -1,0 +1,49 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'europe-west2-docker.pkg.dev/$PROJECT_ID/web-app-repo/web-app:$COMMIT_SHA',
+      '-t', 'europe-west2-docker.pkg.dev/$PROJECT_ID/web-app-repo/web-app:latest',
+      '.'
+    ]
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'europe-west2-docker.pkg.dev/$PROJECT_ID/web-app-repo/web-app:$COMMIT_SHA'
+    ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'europe-west2-docker.pkg.dev/$PROJECT_ID/web-app-repo/web-app:latest'
+    ]
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: [
+      'run', 'deploy', 'web-app',
+      '--image', 'europe-west2-docker.pkg.dev/$PROJECT_ID/web-app-repo/web-app:$COMMIT_SHA',
+      '--region', 'europe-west2',
+      '--platform', 'managed',
+      '--allow-unauthenticated',
+      '--port', '3000',
+      '--memory', '2Gi',
+      '--cpu', '2',
+      '--max-instances', '10',
+      '--set-env-vars', 'NODE_ENV=production',
+      '--set-env-vars', 'NEXTAUTH_URL=https://web-app-884572147716.europe-west2.run.app',
+      '--set-env-vars', 'NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}',
+      '--set-env-vars', 'DATABASE_URL=${_DATABASE_URL}'
+    ]
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  substitution_option: 'ALLOW_LOOSE'
+
+substitutions:
+  _NEXTAUTH_SECRET: 'your-nextauth-secret-here-change-this-in-production'
+  _DATABASE_URL: 'your-postgresql-connection-string-here'
