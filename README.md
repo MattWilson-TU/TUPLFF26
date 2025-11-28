@@ -1,5 +1,7 @@
 # Fantasy Football Auction & Season Manager
 
+-- cloud run trigger test --
+
 A complete web application for managing fantasy football auctions and seasons, built with Next.js, Prisma, and PostgreSQL. Fully containerized with Docker for easy deployment and development.
 
 ## Features
