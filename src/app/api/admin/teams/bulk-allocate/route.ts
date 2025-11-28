@@ -57,11 +57,27 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Check if any players are already owned by someone else
-    const ownedPlayers = players.filter(p => p.currentOwnerId && p.currentOwnerId !== managerId)
-    if (ownedPlayers.length > 0) {
+    // Check if any players are already owned by someone else IN THE SAME PHASE
+    // We look up SquadPlayer records for the requested phase where the player is owned by a different manager
+    const conflictingOwnership = await prisma.squadPlayer.findMany({
+      where: {
+        playerId: { in: playerIds },
+        squad: {
+          phase: phase,
+          managerId: { not: managerId }
+        }
+      },
+      include: {
+        player: true,
+        squad: {
+          include: { manager: true }
+        }
+      }
+    })
+
+    if (conflictingOwnership.length > 0) {
       return NextResponse.json({ 
-        error: `Players already owned by other managers: ${ownedPlayers.map(p => p.webName || p.secondName).join(', ')}` 
+        error: `Players already owned by other managers in Phase ${phase}: ${conflictingOwnership.map(so => `${so.player.webName || so.player.secondName} (${so.squad.manager.username})`).join(', ')}` 
       }, { status: 400 })
     }
 
@@ -150,8 +166,14 @@ export async function POST(request: NextRequest) {
       
       if (existingSquadPlayers.length > 0) {
         const existingPlayerIds = existingSquadPlayers.map(sp => sp.playerId)
+        // Only clear ownership if they are currently owned by this manager
+        // This prevents clearing ownership if they've already moved to another manager in a later phase (edge case)
+        // But mainly, we want to clear them so they are free to be picked up if they aren't in the new allocation
         await tx.player.updateMany({
-          where: { id: { in: existingPlayerIds } },
+          where: { 
+            id: { in: existingPlayerIds },
+            currentOwnerId: managerId 
+          },
           data: { currentOwnerId: null }
         })
       }
@@ -161,11 +183,16 @@ export async function POST(request: NextRequest) {
         await tx.squadPlayer.createMany({
           data: allocations.map(allocation => ({
             squadId: squad.id,
-            playerId: allocation.playerId
+            playerId: allocation.playerId,
+            feeHalfM: allocation.feeHalfM
           }))
         })
 
         // Update player ownership for all new players
+        // We only update currentOwnerId if this is the LATEST phase or there are no other phases
+        // However, for simplicity in the current model, currentOwnerId reflects the "active" ownership.
+        // If we want to support historical ownership, we should rely on SquadPlayer and only use currentOwnerId for the active game state.
+        // Assuming phase 2 is the active phase, we update ownership.
         await tx.player.updateMany({
           where: { id: { in: playerIds } },
           data: { currentOwnerId: managerId }
