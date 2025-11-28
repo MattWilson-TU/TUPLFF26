@@ -60,8 +60,18 @@ export async function GET(
     const currentSquad = squads.find(s => s.phase === currentPhase)
     const currentPlayerIds = currentSquad?.players.map(sp => sp.playerId) || []
 
+    // Determine all players owned by this manager in the current phase (to include manual allocations)
+    // We fetch from SquadPlayer for the current phase instead of relying solely on currentOwnerId
+    // This handles cases where currentOwnerId might be null or out of sync for manual allocations
+    // (Though bulk-allocate now updates it, robustness is good)
+    
     // Get all players ever owned (for former players section)
-    const allPlayerIds = squads.flatMap(s => s.players.map(sp => sp.playerId))
+    // We iterate over all squads to find unique players
+    const allPlayerIds = Array.from(new Set(squads.flatMap(s => s.players.map(sp => sp.playerId))))
+    
+    // (Optional) Fetch additional owned players via currentOwnerId if any exist outside squads (legacy)
+    // But since squads are the source of truth for points, we mainly care about squad players.
+    // We keep currentOwnerId logic for backward compatibility if needed, but Phase logic relies on Squads.
     const ownedPlayers = await prisma.player.findMany({
       where: { currentOwnerId: managerId },
       select: { id: true },
@@ -116,7 +126,12 @@ export async function GET(
     // Build current team players (who score points)
     const currentPlayers = currentSquad?.players.map(sp => {
       const p = sp.player
-      const price = playerIdToPrice[p.id] || 0
+      // Use stored feeHalfM if available, otherwise fallback to auction price
+      let price = sp.feeHalfM || 0
+      if (price === 0) {
+         price = playerIdToPrice[p.id] || 0
+      }
+      
       const pMap = playerPhasePoints[p.id] || { 1: 0, 2: 0, 3: 0, 4: 0 }
       const total = (pMap[1] || 0) + (pMap[2] || 0) + (pMap[3] || 0) + (pMap[4] || 0)
       return {
