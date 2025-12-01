@@ -81,7 +81,9 @@ export async function GET(
         webName: squadPlayer.player.webName || `${squadPlayer.player.firstName} ${squadPlayer.player.secondName}`,
         elementType: squadPlayer.player.elementType,
         teamName: squadPlayer.player.team.name,
-        feeHalfM: auctionLot?.soldPriceHalfM || 0
+        // Use the fee stored on the squad player if available (for post-phase-1 allocations)
+        // Otherwise fallback to the auction lot price (for phase 1 / legacy)
+        feeHalfM: squadPlayer.feeHalfM > 0 ? squadPlayer.feeHalfM : (auctionLot?.soldPriceHalfM || 0)
       }
     })
 
