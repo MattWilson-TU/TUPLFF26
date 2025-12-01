@@ -104,6 +104,8 @@ model SquadPlayer {
   playerId  Int
   // position in formation is derived from Player.elementType; optional slot index for UI
   slot      Int?
+  // price in half-million units, defaulting to 0 for compatibility.
+  feeHalfM  Int     @default(0)
 
   @@unique([squadId, playerId])
 }

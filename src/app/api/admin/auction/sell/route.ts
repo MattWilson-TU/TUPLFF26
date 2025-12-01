@@ -220,6 +220,7 @@ export async function POST(request: NextRequest) {
               data: {
                 squadId: squad.id,
                 playerId: lotDetails.playerId,
+                feeHalfM: finalPrice
               },
             })
           } else {
@@ -237,6 +238,7 @@ export async function POST(request: NextRequest) {
               data: {
                 squadId: newSquad.id,
                 playerId: lotDetails.playerId,
+                feeHalfM: finalPrice
               },
             })
           }

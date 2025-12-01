@@ -183,8 +183,8 @@ export async function POST(request: NextRequest) {
         await tx.squadPlayer.createMany({
           data: allocations.map(allocation => ({
             squadId: squad.id,
-            playerId: allocation.playerId
-            // feeHalfM is not stored on SquadPlayer, it is stored in AuctionLot
+            playerId: allocation.playerId,
+            feeHalfM: allocation.feeHalfM
           }))
         })
 
