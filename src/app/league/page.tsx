@@ -17,6 +17,7 @@ interface Manager {
   computedTotalPoints?: number
   recentGwPoints?: number
   recentGwId?: number
+  wd?: number
   squads: {
     id: string
     phase: number
@@ -84,12 +85,14 @@ export default function LeaguePage() {
       const totalPoints = manager.computedTotalPoints ?? 0
       const budgetRemaining = manager.budgetKGBP
       const recentGwPoints = manager.recentGwPoints ?? 0
+      const wd = manager.wd ?? 0
       
       return {
         ...manager,
         totalPoints,
         budgetRemaining,
         recentGwPoints,
+        wd,
       }
     })
     .sort((a, b) => b.totalPoints - a.totalPoints)
@@ -146,7 +149,9 @@ export default function LeaguePage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">0</Badge>
+                      <Badge variant={manager.wd > 0 ? "default" : manager.wd < 0 ? "destructive" : "outline"}>
+                        {manager.wd > 0 ? `+${manager.wd}` : manager.wd}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
