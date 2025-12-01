@@ -14,9 +14,11 @@ export async function GET() {
     // Build phase -> gwIds map
     const gameweeks = await prisma.gameweek.findMany({ orderBy: { id: 'asc' } })
     const phaseToGwIds: Record<number, number[]> = {}
+    const gwIdToPhase: Record<number, number> = {}
     for (const gw of gameweeks) {
       phaseToGwIds[gw.phase] = phaseToGwIds[gw.phase] || []
       phaseToGwIds[gw.phase].push(gw.id)
+      gwIdToPhase[gw.id] = gw.phase
     }
 
     // Compute total points across all phases for all managers for standings
@@ -95,42 +97,36 @@ export async function GET() {
       last3Ids = gameweeksWithData.map(gw => gw.gameweekId).reverse() // reverse to get ascending order
     }
 
-    // Use Phase 1 squad players as the base team for quick stats
-    const phase1Squad = await prisma.squad.findFirst({
-      where: { managerId: session.user.id, phase: 1 },
-      include: { players: { select: { playerId: true } } },
+    // Fetch all squads for the current user to determine players per phase for quick stats
+    const userSquads = await prisma.squad.findMany({
+      where: { managerId: session.user.id },
+      include: { players: { select: { playerId: true } } }
     })
+    const phaseToSquadPlayers: Record<number, number[]> = {}
+    for (const s of userSquads) {
+      phaseToSquadPlayers[s.phase] = s.players.map(p => p.playerId)
+    }
 
     let last3ByGw: Array<{ gameweekId: number; points: number }> = []
-    if (phase1Squad && last3Ids.length > 0 && phase1Squad.players.length > 0) {
-      // Check if we have any gameweek points data
-      const hasGameweekData = await prisma.gameweekPlayerPoints.count({
-        where: {
-          gameweekId: { in: last3Ids },
-          playerId: { in: phase1Squad.players.map((p) => p.playerId) },
+    if (last3Ids.length > 0) {
+      // Calculate points per gameweek using the correct squad for that phase
+      for (const gwId of last3Ids) {
+        const phase = gwIdToPhase[gwId] || 1
+        const playerIds = phaseToSquadPlayers[phase] || []
+        
+        if (playerIds.length === 0) {
+          last3ByGw.push({ gameweekId: gwId, points: 0 })
+          continue
         }
-      }) > 0
 
-      if (hasGameweekData) {
-        const gwPoints = await prisma.gameweekPlayerPoints.groupBy({
-          by: ['gameweekId'],
+        const result = await prisma.gameweekPlayerPoints.aggregate({
           where: {
-            gameweekId: { in: last3Ids },
-            playerId: { in: phase1Squad.players.map((p) => p.playerId) },
+            gameweekId: gwId,
+            playerId: { in: playerIds }
           },
-          _sum: { points: true },
+          _sum: { points: true }
         })
-        // Ensure ascending order oldest -> newest
-        last3ByGw = last3Ids.map(gwId => ({
-          gameweekId: gwId,
-          points: gwPoints.find(g => g.gameweekId === gwId)?._sum.points || 0,
-        }))
-      } else {
-        // No gameweek data, return zeros
-        last3ByGw = last3Ids.map(gwId => ({
-          gameweekId: gwId,
-          points: 0,
-        }))
+        last3ByGw.push({ gameweekId: gwId, points: result._sum.points || 0 })
       }
     }
 

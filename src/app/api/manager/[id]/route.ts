@@ -114,12 +114,37 @@ export async function GET(
       playerPhasePoints[row.playerId][phase] = (playerPhasePoints[row.playerId][phase] || 0) + row.points
     }
 
-    // Compute overall phase totals (manager totals per phase) - ONLY from current phase players
+    // Map players to the phases they were owned in
+    const playerOwnedPhases: Record<number, Set<number>> = {}
+    for (const squad of squads) {
+      for (const sp of squad.players) {
+        if (!playerOwnedPhases[sp.playerId]) {
+          playerOwnedPhases[sp.playerId] = new Set()
+        }
+        playerOwnedPhases[sp.playerId].add(squad.phase)
+      }
+    }
+
+    // Compute overall phase totals (manager totals per phase)
     const phaseScores: Array<{ phase: number; totalPoints: number }> = [1,2,3,4].map(phase => ({ phase, totalPoints: 0 }))
-    for (const pid of currentPlayerIds) {
+    for (const pid of allOwnedPlayerIds) {
       const map = playerPhasePoints[pid] || {}
+      const ownedPhases = playerOwnedPhases[pid] || new Set()
       for (const phase of [1,2,3,4]) {
-        phaseScores[phase - 1].totalPoints += map[phase] || 0
+        if (ownedPhases.has(phase)) {
+          phaseScores[phase - 1].totalPoints += map[phase] || 0
+        }
+      }
+    }
+
+    // Helper to filter points by owned phases
+    const getFilteredPoints = (pid: number, map: Record<number, number>) => {
+      const ownedPhases = playerOwnedPhases[pid] || new Set()
+      return {
+        1: ownedPhases.has(1) ? (map[1] || 0) : 0,
+        2: ownedPhases.has(2) ? (map[2] || 0) : 0,
+        3: ownedPhases.has(3) ? (map[3] || 0) : 0,
+        4: ownedPhases.has(4) ? (map[4] || 0) : 0,
       }
     }
 
@@ -133,7 +158,8 @@ export async function GET(
       }
       
       const pMap = playerPhasePoints[p.id] || { 1: 0, 2: 0, 3: 0, 4: 0 }
-      const total = (pMap[1] || 0) + (pMap[2] || 0) + (pMap[3] || 0) + (pMap[4] || 0)
+      const filteredPoints = getFilteredPoints(p.id, pMap)
+      const total = filteredPoints[1] + filteredPoints[2] + filteredPoints[3] + filteredPoints[4]
       return {
         id: p.id,
         firstName: p.firstName,
@@ -142,7 +168,7 @@ export async function GET(
         elementType: p.elementType,
         team: p.team,
         priceHalfM: price,
-        phasePoints: { 1: pMap[1] || 0, 2: pMap[2] || 0, 3: pMap[3] || 0, 4: pMap[4] || 0 },
+        phasePoints: filteredPoints,
         totalPoints: total,
       }
     }) || []
@@ -156,7 +182,8 @@ export async function GET(
       
       const price = playerIdToPrice[pid] || 0
       const pMap = playerPhasePoints[pid] || { 1: 0, 2: 0, 3: 0, 4: 0 }
-      const total = (pMap[1] || 0) + (pMap[2] || 0) + (pMap[3] || 0) + (pMap[4] || 0)
+      const filteredPoints = getFilteredPoints(pid, pMap)
+      const total = filteredPoints[1] + filteredPoints[2] + filteredPoints[3] + filteredPoints[4]
       return {
         id: player.id,
         firstName: player.firstName,
@@ -165,7 +192,7 @@ export async function GET(
         elementType: player.elementType,
         team: player.team,
         priceHalfM: price,
-        phasePoints: { 1: pMap[1] || 0, 2: pMap[2] || 0, 3: pMap[3] || 0, 4: pMap[4] || 0 },
+        phasePoints: filteredPoints,
         totalPoints: total,
       }
     }).filter(Boolean)
