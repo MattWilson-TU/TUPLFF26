@@ -78,7 +78,7 @@ export async function GET() {
           })
           totalPoints += gwPoints.reduce((sum, g) => sum + (g.points || 0), 0)
 
-          if (recentGwId != null) {
+          if (recentGwId != null && gwIds.includes(recentGwId)) {
             const recentPoints = await prisma.gameweekPlayerPoints.findMany({
               where: {
                 gameweekId: { in: [recentGwId] },
