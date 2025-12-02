@@ -49,7 +49,12 @@ export default function MyTeamPage() {
           setCurrentPhase(data.currentPhase || 1)
           setAllPlayers(data.allPlayers || [])
           setAllGameweekIds(data.allGameweekIds || [])
+        } else {
+          const error = await res.json().catch(() => ({ error: 'Failed to load team data' }))
+          console.error('Failed to load team data:', error)
         }
+      } catch (error) {
+        console.error('Error loading team data:', error)
       } finally {
         setLoading(false)
       }

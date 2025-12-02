@@ -91,6 +91,17 @@ export async function GET() {
       playerPhasePoints[row.playerId][phase] = (playerPhasePoints[row.playerId][phase] || 0) + row.points
     }
 
+    // Map players to the phases they were owned in
+    const playerOwnedPhases: Record<number, Set<number>> = {}
+    for (const squad of squads) {
+      for (const sp of squad.players) {
+        if (!playerOwnedPhases[sp.playerId]) {
+          playerOwnedPhases[sp.playerId] = new Set()
+        }
+        playerOwnedPhases[sp.playerId].add(squad.phase)
+      }
+    }
+
     // Build weekly gameweek data for each player
     // Map player -> gameweek -> { points, counted }
     const playerWeeklyData: Record<number, Array<{ gameweekId: number; points: number; counted: boolean }>> = {}
@@ -116,17 +127,6 @@ export async function GET() {
         const counted = ownedPhases.has(phase)
         
         playerWeeklyData[playerId].push({ gameweekId: gwId, points, counted })
-      }
-    }
-
-    // Map players to the phases they were owned in
-    const playerOwnedPhases: Record<number, Set<number>> = {}
-    for (const squad of squads) {
-      for (const sp of squad.players) {
-        if (!playerOwnedPhases[sp.playerId]) {
-          playerOwnedPhases[sp.playerId] = new Set()
-        }
-        playerOwnedPhases[sp.playerId].add(squad.phase)
       }
     }
 
