@@ -156,7 +156,11 @@ export async function GET() {
     // Build current team players (who score points)
     const currentPlayers = currentSquad?.players.map(sp => {
       const p = sp.player
-      const price = playerIdToPrice[p.id] || 0
+      // Use stored feeHalfM if available, otherwise fallback to auction price
+      let price = sp.feeHalfM || 0
+      if (price === 0) {
+        price = playerIdToPrice[p.id] || 0
+      }
       const pMap = playerPhasePoints[p.id] || { 1: 0, 2: 0, 3: 0, 4: 0 }
       const filteredPoints = getFilteredPoints(p.id, pMap)
       const total = filteredPoints[1] + filteredPoints[2] + filteredPoints[3] + filteredPoints[4]
@@ -178,10 +182,15 @@ export async function GET() {
     const formerPlayerIds = allOwnedPlayerIds.filter(id => !currentPlayerIds.includes(id))
     const formerPlayers = formerPlayerIds.map(pid => {
       const squad = squads.find(s => s.players.some(sp => sp.playerId === pid))
-      const player = squad?.players.find(sp => sp.playerId === pid)?.player
+      const squadPlayer = squad?.players.find(sp => sp.playerId === pid)
+      const player = squadPlayer?.player
       if (!player) return null
       
-      const price = playerIdToPrice[pid] || 0
+      // Use stored feeHalfM if available, otherwise fallback to auction price
+      let price = squadPlayer.feeHalfM || 0
+      if (price === 0) {
+        price = playerIdToPrice[pid] || 0
+      }
       const pMap = playerPhasePoints[pid] || { 1: 0, 2: 0, 3: 0, 4: 0 }
       const filteredPoints = getFilteredPoints(pid, pMap)
       const total = filteredPoints[1] + filteredPoints[2] + filteredPoints[3] + filteredPoints[4]
