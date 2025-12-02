@@ -35,6 +35,7 @@ export default function DashboardPage() {
   })
   const [passwordError, setPasswordError] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [currentPhase, setCurrentPhase] = useState<number | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -130,6 +131,17 @@ export default function DashboardPage() {
     }
     loadMyPlayers()
   }, [session, auctionStatus])
+
+  useEffect(() => {
+    async function loadCurrentPhase() {
+      const res = await fetch('/api/gameweek/current-phase')
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentPhase(data.phase || null)
+      }
+    }
+    loadCurrentPhase()
+  }, [])
 
   if (!session) {
     return null
@@ -264,7 +276,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                View the current league table with all managers' points and positions.
+                View the current league table.
               </p>
               <Button asChild className="w-full">
                 <Link href="/league">View League</Link>
@@ -298,7 +310,9 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 📊 My Team
-                <Badge variant="secondary">Phase 1</Badge>
+                {currentPhase !== null && (
+                  <Badge variant="secondary">Phase {currentPhase}</Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 View your current squad
