@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import Link from 'next/link'
 
 interface Player {
   id: number
@@ -378,6 +379,17 @@ export default function AuctionRoomPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Auction Room</h1>
+              <p className="text-gray-600 mt-2">Live auction bidding</p>
+            </div>
+            <Button asChild variant="outline">
+              <Link href="/dashboard">← Back to Dashboard</Link>
+            </Button>
+          </div>
+        </div>
         {isAdmin && (
           <div className="mb-4 flex flex-wrap gap-2 justify-end">
             <Button

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import Link from 'next/link'
 // removed avatar/photo usage per request
 
 interface Player {
@@ -193,10 +194,17 @@ export default function PlayersPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Player Database</h1>
-          <p className="text-gray-600 mt-2">
-            Search and analyze all available players
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Player Database</h1>
+              <p className="text-gray-600 mt-2">
+                Search and analyze all available players
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <Link href="/dashboard">← Back to Dashboard</Link>
+            </Button>
+          </div>
         </div>
 
         <Card className="mb-6">

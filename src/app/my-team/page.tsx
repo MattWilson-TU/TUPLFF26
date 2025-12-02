@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 type GridPlayer = {
   id: number
@@ -100,8 +102,15 @@ export default function MyTeamPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">My Team</h1>
-          <p className="text-gray-600">Phase scores and squad (Phase {currentPhase} active)</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">My Team</h1>
+              <p className="text-gray-600">Phase scores and squad (Phase {currentPhase} active)</p>
+            </div>
+            <Button asChild variant="outline">
+              <Link href="/dashboard">← Back to Dashboard</Link>
+            </Button>
+          </div>
         </div>
 
         {/* Auction Summary - Show when auction is closed */}

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface PlayerStats {
@@ -167,8 +168,8 @@ export default function StatsPage() {
                 Player performance and manager analytics
               </p>
             </div>
-            <Button onClick={() => router.back()} variant="outline">
-              ← Back
+            <Button asChild variant="outline">
+              <Link href="/dashboard">← Back to Dashboard</Link>
             </Button>
           </div>
         </div>

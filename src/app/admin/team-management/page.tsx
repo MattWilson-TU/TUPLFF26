@@ -453,7 +453,7 @@ export default function TeamManagementPage() {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Button variant="outline" asChild>
-              <Link href="/admin">← Back to Admin</Link>
+              <Link href="/dashboard">← Back to Dashboard</Link>
             </Button>
             <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
           </div>

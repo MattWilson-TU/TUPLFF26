@@ -104,7 +104,7 @@ export default function ManagerTeamPage({ params }: { params: Promise<{ id: stri
               <p className="text-gray-600">Current squad and performance (Phase {managerData.currentPhase} active)</p>
             </div>
             <Button asChild variant="outline">
-              <Link href="/league">← Back to League</Link>
+              <Link href="/dashboard">← Back to Dashboard</Link>
             </Button>
           </div>
         </div>
