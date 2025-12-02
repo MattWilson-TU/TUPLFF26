@@ -91,6 +91,34 @@ export async function GET() {
       playerPhasePoints[row.playerId][phase] = (playerPhasePoints[row.playerId][phase] || 0) + row.points
     }
 
+    // Build weekly gameweek data for each player
+    // Map player -> gameweek -> { points, counted }
+    const playerWeeklyData: Record<number, Array<{ gameweekId: number; points: number; counted: boolean }>> = {}
+    for (const playerId of allOwnedPlayerIds) {
+      playerWeeklyData[playerId] = []
+    }
+    
+    // Get all gameweek IDs sorted
+    const allGameweekIds = gameweeks.map(gw => gw.id).sort((a, b) => a - b)
+    
+    // For each player and gameweek, determine if points counted
+    for (const playerId of allOwnedPlayerIds) {
+      const ownedPhases = playerOwnedPhases[playerId] || new Set()
+      for (const gwId of allGameweekIds) {
+        const phase = gwIdToPhase[gwId]
+        if (!phase) continue
+        
+        // Find points for this player in this gameweek
+        const gwPoints = gpp.find(p => p.playerId === playerId && p.gameweekId === gwId)
+        const points = gwPoints?.points || 0
+        
+        // Points counted if player was owned in this phase
+        const counted = ownedPhases.has(phase)
+        
+        playerWeeklyData[playerId].push({ gameweekId: gwId, points, counted })
+      }
+    }
+
     // Map players to the phases they were owned in
     const playerOwnedPhases: Record<number, Set<number>> = {}
     for (const squad of squads) {
@@ -142,6 +170,7 @@ export async function GET() {
         priceHalfM: price,
         phasePoints: filteredPoints,
         totalPoints: total,
+        weeklyData: playerWeeklyData[p.id] || [],
       }
     }) || []
 
@@ -167,14 +196,23 @@ export async function GET() {
         phasePoints: filteredPoints,
         totalPoints: total,
         lastPhase: squad?.phase || 1,
+        weeklyData: playerWeeklyData[pid] || [],
       }
     }).filter(Boolean)
+
+    // Build all players list (current + former) for weekly view
+    const allPlayers = [
+      ...currentPlayers,
+      ...formerPlayers,
+    ]
 
     return NextResponse.json({ 
       currentPlayers, 
       formerPlayers, 
       phaseScores, 
-      currentPhase 
+      currentPhase,
+      allPlayers,
+      allGameweekIds,
     })
   } catch (error) {
     console.error('Error fetching my team:', error)

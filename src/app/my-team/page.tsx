@@ -17,6 +17,7 @@ type GridPlayer = {
   phasePoints: { 1: number; 2: number; 3: number; 4: number }
   totalPoints: number
   lastPhase?: number
+  weeklyData?: Array<{ gameweekId: number; points: number; counted: boolean }>
 }
 
 export default function MyTeamPage() {
@@ -28,6 +29,9 @@ export default function MyTeamPage() {
   const [currentPhase, setCurrentPhase] = useState<number>(1)
   const [loading, setLoading] = useState(true)
   const [auctionStatus, setAuctionStatus] = useState<'OPEN' | 'CLOSED' | null>(null)
+  const [allPlayers, setAllPlayers] = useState<GridPlayer[]>([])
+  const [allGameweekIds, setAllGameweekIds] = useState<number[]>([])
+  const [activeTab, setActiveTab] = useState<'squad' | 'weekly'>('squad')
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin')
@@ -43,6 +47,8 @@ export default function MyTeamPage() {
           setFormerPlayers(data.formerPlayers || [])
           setPhaseScores(data.phaseScores || [])
           setCurrentPhase(data.currentPhase || 1)
+          setAllPlayers(data.allPlayers || [])
+          setAllGameweekIds(data.allGameweekIds || [])
         }
       } finally {
         setLoading(false)
@@ -169,107 +175,218 @@ export default function MyTeamPage() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Current Squad (Phase {currentPhase})</CardTitle>
-            <CardDescription>Players who score points for you</CardDescription>
+            <CardTitle>My Squad</CardTitle>
+            <CardDescription>View your squad and weekly performance</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-600">
-                    <th className="p-2">Player</th>
-                    <th className="p-2">Pos</th>
-                    <th className="p-2">Value</th>
-                    <th className="p-2">P1</th>
-                    <th className="p-2">P2</th>
-                    <th className="p-2">P3</th>
-                    <th className="p-2">P4</th>
-                    <th className="p-2">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentPlayers
-                    .slice()
-                    .sort((a,b) => {
-                      const order: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 }
-                      const pc = order[a.elementType] - order[b.elementType]
-                      if (pc !== 0) return pc
-                      return (a.webName || a.secondName).localeCompare(b.webName || b.secondName)
-                    })
-                    .map(p => (
-                      <tr key={p.id} className="border-t">
-                        <td className="p-2">{p.firstName} {p.secondName} ({p.webName || p.secondName})</td>
-                        <td className="p-2">
-                          <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
-                        </td>
-                        <td className="p-2">£{(p.priceHalfM * 0.5).toFixed(1)}m</td>
-                        <td className="p-2">{p.phasePoints[1]}</td>
-                        <td className="p-2">{p.phasePoints[2]}</td>
-                        <td className="p-2">{p.phasePoints[3]}</td>
-                        <td className="p-2">{p.phasePoints[4]}</td>
-                        <td className="p-2 font-semibold">{p.totalPoints}</td>
-                      </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6 border-b">
+              <button
+                onClick={() => setActiveTab('squad')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'squad'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Squad View
+              </button>
+              <button
+                onClick={() => setActiveTab('weekly')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'weekly'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Weekly Scores
+              </button>
             </div>
+
+            {/* Squad View Tab */}
+            {activeTab === 'squad' && (
+              <>
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Current Squad (Phase {currentPhase})</h3>
+                  <p className="text-sm text-gray-600 mb-4">Players who score points for you</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-600">
+                          <th className="p-2">Player</th>
+                          <th className="p-2">Pos</th>
+                          <th className="p-2">Value</th>
+                          <th className="p-2">P1</th>
+                          <th className="p-2">P2</th>
+                          <th className="p-2">P3</th>
+                          <th className="p-2">P4</th>
+                          <th className="p-2">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentPlayers
+                          .slice()
+                          .sort((a,b) => {
+                            const order: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 }
+                            const pc = order[a.elementType] - order[b.elementType]
+                            if (pc !== 0) return pc
+                            return (a.webName || a.secondName).localeCompare(b.webName || b.secondName)
+                          })
+                          .map(p => (
+                            <tr key={p.id} className="border-t">
+                              <td className="p-2">{p.firstName} {p.secondName} ({p.webName || p.secondName})</td>
+                              <td className="p-2">
+                                <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
+                              </td>
+                              <td className="p-2">£{(p.priceHalfM * 0.5).toFixed(1)}m</td>
+                              <td className="p-2">{p.phasePoints[1]}</td>
+                              <td className="p-2">{p.phasePoints[2]}</td>
+                              <td className="p-2">{p.phasePoints[3]}</td>
+                              <td className="p-2">{p.phasePoints[4]}</td>
+                              <td className="p-2 font-semibold">{p.totalPoints}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {formerPlayers.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Former Players</h3>
+                    <p className="text-sm text-gray-600 mb-4">Players who no longer score points for you</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-gray-600">
+                            <th className="p-2">Player</th>
+                            <th className="p-2">Pos</th>
+                            <th className="p-2">Value</th>
+                            <th className="p-2">Last Phase</th>
+                            <th className="p-2">P1</th>
+                            <th className="p-2">P2</th>
+                            <th className="p-2">P3</th>
+                            <th className="p-2">P4</th>
+                            <th className="p-2">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {formerPlayers
+                            .slice()
+                            .sort((a,b) => {
+                              const order: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 }
+                              const pc = order[a.elementType] - order[b.elementType]
+                              if (pc !== 0) return pc
+                              return (a.webName || a.secondName).localeCompare(b.webName || b.secondName)
+                            })
+                            .map(p => (
+                              <tr key={p.id} className="border-t">
+                                <td className="p-2">{p.firstName} {p.secondName} ({p.webName || p.secondName})</td>
+                                <td className="p-2">
+                                  <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
+                                </td>
+                                <td className="p-2">£{(p.priceHalfM * 0.5).toFixed(1)}m</td>
+                                <td className="p-2">
+                                  <Badge variant="outline">Phase {p.lastPhase}</Badge>
+                                </td>
+                                <td className="p-2">{p.phasePoints[1]}</td>
+                                <td className="p-2">{p.phasePoints[2]}</td>
+                                <td className="p-2">{p.phasePoints[3]}</td>
+                                <td className="p-2">{p.phasePoints[4]}</td>
+                                <td className="p-2 font-semibold">{p.totalPoints}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Weekly Scores Tab */}
+            {activeTab === 'weekly' && (
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Weekly Scores by Player</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  All players owned across all phases. Green highlights indicate weeks where points counted towards your total.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="text-left text-gray-600 bg-gray-50">
+                        <th className="p-2 sticky left-0 bg-gray-50 z-10 border-r">Player</th>
+                        <th className="p-2 sticky left-[180px] bg-gray-50 z-10 border-r">Pos</th>
+                        {allGameweekIds.map(gwId => (
+                          <th key={gwId} className="p-2 text-center min-w-[45px] border-r">GW{gwId}</th>
+                        ))}
+                        <th className="p-2 text-center bg-gray-100">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allPlayers
+                        .slice()
+                        .sort((a,b) => {
+                          const order: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 }
+                          const pc = order[a.elementType] - order[b.elementType]
+                          if (pc !== 0) return pc
+                          return (a.webName || a.secondName).localeCompare(b.webName || b.secondName)
+                        })
+                        .map(p => {
+                          const weeklyDataMap = new Map(
+                            (p.weeklyData || []).map(wd => [wd.gameweekId, wd])
+                          )
+                          const totalCounted = (p.weeklyData || []).reduce((sum, wd) => sum + (wd.counted ? wd.points : 0), 0)
+                          
+                          return (
+                            <tr key={p.id} className="border-t group hover:bg-gray-50">
+                              <td className="p-2 sticky left-0 bg-white group-hover:bg-gray-50 z-10 font-medium border-r whitespace-nowrap">
+                                {p.firstName} {p.secondName}
+                                {p.webName && ` (${p.webName})`}
+                              </td>
+                              <td className="p-2 sticky left-[180px] bg-white group-hover:bg-gray-50 z-10 border-r">
+                                <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
+                              </td>
+                              {allGameweekIds.map(gwId => {
+                                const wd = weeklyDataMap.get(gwId)
+                                const points = wd?.points || 0
+                                const counted = wd?.counted || false
+                                
+                                return (
+                                  <td
+                                    key={gwId}
+                                    className={`p-2 text-center border-r ${
+                                      counted && points > 0
+                                        ? 'bg-green-100 text-green-800 font-semibold'
+                                        : counted
+                                        ? 'bg-green-50 text-gray-600'
+                                        : points > 0
+                                        ? 'text-gray-400'
+                                        : 'text-gray-300'
+                                    }`}
+                                  >
+                                    {points > 0 ? points : '-'}
+                                  </td>
+                                )
+                              })}
+                              <td className="p-2 text-center font-semibold bg-gray-50">
+                                {totalCounted}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-4 text-xs text-gray-500">
+                  <p>• Green cells indicate weeks where points counted towards your total</p>
+                  <p>• Light green cells indicate weeks where player was owned but scored 0 points</p>
+                  <p>• Gray cells indicate weeks where player was not owned</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {formerPlayers.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Former Players</CardTitle>
-              <CardDescription>Players who no longer score points for you</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-600">
-                      <th className="p-2">Player</th>
-                      <th className="p-2">Pos</th>
-                      <th className="p-2">Value</th>
-                      <th className="p-2">Last Phase</th>
-                      <th className="p-2">P1</th>
-                      <th className="p-2">P2</th>
-                      <th className="p-2">P3</th>
-                      <th className="p-2">P4</th>
-                      <th className="p-2">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {formerPlayers
-                      .slice()
-                      .sort((a,b) => {
-                        const order: Record<string, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 }
-                        const pc = order[a.elementType] - order[b.elementType]
-                        if (pc !== 0) return pc
-                        return (a.webName || a.secondName).localeCompare(b.webName || b.secondName)
-                      })
-                      .map(p => (
-                        <tr key={p.id} className="border-t">
-                          <td className="p-2">{p.firstName} {p.secondName} ({p.webName || p.secondName})</td>
-                          <td className="p-2">
-                            <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
-                          </td>
-                          <td className="p-2">£{(p.priceHalfM * 0.5).toFixed(1)}m</td>
-                          <td className="p-2">
-                            <Badge variant="outline">Phase {p.lastPhase}</Badge>
-                          </td>
-                          <td className="p-2">{p.phasePoints[1]}</td>
-                          <td className="p-2">{p.phasePoints[2]}</td>
-                          <td className="p-2">{p.phasePoints[3]}</td>
-                          <td className="p-2">{p.phasePoints[4]}</td>
-                          <td className="p-2 font-semibold">{p.totalPoints}</td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   )
