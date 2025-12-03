@@ -25,7 +25,20 @@ echo "Image: ${IMAGE_NAME}"
 echo ""
 
 # Get the service account email for the web app
-SERVICE_ACCOUNT="${SERVICE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+# Try to get it from the Cloud Run service, or use default compute service account
+SERVICE_ACCOUNT=$(gcloud run services describe "${SERVICE_NAME}" \
+  --region="${REGION}" \
+  --project="${PROJECT_ID}" \
+  --format="value(spec.template.spec.serviceAccountName)" 2>/dev/null || echo "")
+
+if [ -z "$SERVICE_ACCOUNT" ]; then
+  # If no service account is set, use the default compute service account
+  PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+  SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+  echo "No service account found for ${SERVICE_NAME}, using default: ${SERVICE_ACCOUNT}"
+else
+  echo "Using service account from ${SERVICE_NAME}: ${SERVICE_ACCOUNT}"
+fi
 
 # Check if job already exists
 if gcloud run jobs describe "${JOB_NAME}" --region="${REGION}" --project="${PROJECT_ID}" &>/dev/null; then
@@ -67,7 +80,7 @@ else
 fi
 
 echo ""
-echo "Granting permissions to web app service account..."
+echo "Granting permissions to service account: ${SERVICE_ACCOUNT}..."
 
 # Grant the web app service account permission to invoke the job
 gcloud run jobs add-iam-policy-binding "${JOB_NAME}" \
