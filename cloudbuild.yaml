@@ -35,7 +35,8 @@ steps:
       '--cpu', '2',
       '--max-instances', '10',
       '--update-env-vars', 'NODE_ENV=production',
-      '--update-env-vars', 'NEXTAUTH_URL=https://app.tuplff.co.uk'
+      '--update-env-vars', 'NEXTAUTH_URL=https://app.tuplff.co.uk',
+      '--update-env-vars', 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
     ]
 
 options:
