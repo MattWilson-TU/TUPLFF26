@@ -21,6 +21,8 @@ export default function AdminPage() {
   const [refreshProgress, setRefreshProgress] = useState<string>('')
   const [isUploadingData, setIsUploadingData] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>('')
+  const [isCloudUpdating, setIsCloudUpdating] = useState(false)
+  const [cloudUpdateProgress, setCloudUpdateProgress] = useState<string>('')
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin')
@@ -199,6 +201,38 @@ export default function AdminPage() {
     }
   }
 
+  async function cloudUpdateFPLData() {
+    if (!confirm('Are you sure you want to trigger a cloud update? This will download the latest FPL data and update the database.')) {
+      return
+    }
+
+    try {
+      setIsCloudUpdating(true)
+      setCloudUpdateProgress('Triggering cloud update job...')
+      
+      const res = await fetch('/api/admin/cloud-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        setCloudUpdateProgress(`Job triggered: ${result.execution.name}`)
+        alert('Cloud update job triggered successfully! The update is running in the background. Check Cloud Run logs for progress.')
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Failed to trigger cloud update')
+        setCloudUpdateProgress('')
+      }
+    } catch (error) {
+      console.error('Error triggering cloud update:', error)
+      alert('Failed to trigger cloud update')
+      setCloudUpdateProgress('')
+    } finally {
+      setIsCloudUpdating(false)
+    }
+  }
+
 
   if (status === 'loading') return null
 
@@ -265,11 +299,17 @@ export default function AdminPage() {
                 <Button onClick={uploadFPLData} disabled={isUploadingData} variant="outline">
                   {isUploadingData ? 'Uploading...' : '📤 Upload FPL Data'}
                 </Button>
+                <Button onClick={cloudUpdateFPLData} disabled={isCloudUpdating} variant="outline">
+                  {isCloudUpdating ? 'Triggering...' : '☁️ Cloud Update'}
+                </Button>
                 {isRefreshingScores && (
                   <span className="text-sm text-gray-600">{refreshProgress}</span>
                 )}
                 {isUploadingData && (
                   <span className="text-sm text-gray-600">{uploadProgress}</span>
+                )}
+                {isCloudUpdating && (
+                  <span className="text-sm text-gray-600">{cloudUpdateProgress}</span>
                 )}
               </div>
               <div className="flex gap-2">
