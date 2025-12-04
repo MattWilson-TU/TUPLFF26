@@ -329,12 +329,12 @@ export default function MyTeamPage() {
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="text-left text-gray-600 bg-gray-50">
-                        <th className="p-2 sticky left-0 bg-gray-50 z-10 border-r">Player</th>
-                        <th className="p-2 sticky left-[180px] bg-gray-50 z-10 border-r">Pos</th>
+                        <th className="p-2 sticky left-0 bg-gray-50 z-20 border-r min-w-[200px]">Player</th>
+                        <th className="p-2 border-r">Pos</th>
                         {allGameweekIds.map(gwId => (
-                          <th key={gwId} className="p-2 text-center min-w-[45px] border-r">GW{gwId}</th>
+                          <th key={gwId} className="p-2 text-center min-w-[50px] border-r">GW{gwId}</th>
                         ))}
-                        <th className="p-2 text-center bg-gray-100">Total</th>
+                        <th className="p-2 text-center bg-gray-100 min-w-[60px]">Total</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -354,10 +354,10 @@ export default function MyTeamPage() {
                           
                           return (
                             <tr key={p.id} className="border-t group hover:bg-gray-50">
-                              <td className="p-2 sticky left-0 bg-white group-hover:bg-gray-50 z-10 font-medium border-r whitespace-nowrap">
+                              <td className="p-2 sticky left-0 bg-white group-hover:bg-gray-50 z-20 font-medium border-r whitespace-nowrap min-w-[200px]">
                                 {p.webName || `${p.firstName} ${p.secondName}`} ({p.team.name})
                               </td>
-                              <td className="p-2 sticky left-[180px] bg-white group-hover:bg-gray-50 z-10 border-r">
+                              <td className="p-2 border-r">
                                 <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
                               </td>
                               {allGameweekIds.map(gwId => {
@@ -368,7 +368,7 @@ export default function MyTeamPage() {
                                 return (
                                   <td
                                     key={gwId}
-                                    className={`p-2 text-center border-r ${
+                                    className={`p-2 text-center border-r min-w-[50px] ${
                                       counted && points > 0
                                         ? 'bg-green-100 text-green-800 font-semibold'
                                         : counted
@@ -382,7 +382,7 @@ export default function MyTeamPage() {
                                   </td>
                                 )
                               })}
-                              <td className="p-2 text-center font-semibold bg-gray-50">
+                              <td className="p-2 text-center font-semibold bg-gray-50 min-w-[60px]">
                                 {totalCounted}
                               </td>
                             </tr>
