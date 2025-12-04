@@ -166,7 +166,7 @@ export default function ManagerTeamPage({ params }: { params: Promise<{ id: stri
                     })
                     .map(p => (
                       <tr key={p.id} className="border-t">
-                        <td className="p-2">{p.webName || `${p.firstName} ${p.secondName}`}</td>
+                        <td className="p-2">{p.webName || `${p.firstName} ${p.secondName}`} ({p.team.name})</td>
                         <td className="p-2">
                           <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
                         </td>
@@ -177,7 +177,7 @@ export default function ManagerTeamPage({ params }: { params: Promise<{ id: stri
                         <td className="p-2">{p.phasePoints[4]}</td>
                         <td className="p-2 font-semibold">{p.totalPoints}</td>
                       </tr>
-                  ))}
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -216,7 +216,7 @@ export default function ManagerTeamPage({ params }: { params: Promise<{ id: stri
                       })
                       .map(p => (
                         <tr key={p.id} className="border-t">
-                          <td className="p-2">{p.webName || `${p.firstName} ${p.secondName}`}</td>
+                          <td className="p-2">{p.webName || `${p.firstName} ${p.secondName}`} ({p.team.name})</td>
                           <td className="p-2">
                             <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
                           </td>

@@ -248,7 +248,7 @@ export default function MyTeamPage() {
                           })
                           .map(p => (
                             <tr key={p.id} className="border-t">
-                              <td className="p-2">{p.firstName} {p.secondName} ({p.webName || p.secondName})</td>
+                              <td className="p-2">{p.webName || `${p.firstName} ${p.secondName}`} ({p.team.name})</td>
                               <td className="p-2">
                                 <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
                               </td>
@@ -295,7 +295,7 @@ export default function MyTeamPage() {
                             })
                             .map(p => (
                               <tr key={p.id} className="border-t">
-                                <td className="p-2">{p.firstName} {p.secondName} ({p.webName || p.secondName})</td>
+                                <td className="p-2">{p.webName || `${p.firstName} ${p.secondName}`} ({p.team.name})</td>
                                 <td className="p-2">
                                   <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
                                 </td>
