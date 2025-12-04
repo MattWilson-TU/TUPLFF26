@@ -355,8 +355,7 @@ export default function MyTeamPage() {
                           return (
                             <tr key={p.id} className="border-t group hover:bg-gray-50">
                               <td className="p-2 sticky left-0 bg-white group-hover:bg-gray-50 z-10 font-medium border-r whitespace-nowrap">
-                                {p.firstName} {p.secondName}
-                                {p.webName && ` (${p.webName})`}
+                                {p.webName || `${p.firstName} ${p.secondName}`} ({p.team.name})
                               </td>
                               <td className="p-2 sticky left-[180px] bg-white group-hover:bg-gray-50 z-10 border-r">
                                 <Badge className={getPositionColor(p.elementType)}>{p.elementType}</Badge>
