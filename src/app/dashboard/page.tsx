@@ -320,7 +320,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Check your current squad, formation, and player performance.
+                Check your current squad.
               </p>
               <Button asChild className="w-full">
                 <Link href="/my-team">View Team</Link>
