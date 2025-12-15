@@ -6,7 +6,7 @@ const fs = require('fs')
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL || 'postgresql://fpluser:MyAppPassword123@34.39.28.130:5432/fpl_auction'
+      url: process.env.DATABASE_URL || 'postgresql://fpluser:[Ap)qnKbT3*_zU]-@34.39.28.130:5432/fpl_auction'
     }
   }
 })
