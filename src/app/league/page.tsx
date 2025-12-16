@@ -38,6 +38,7 @@ export default function LeaguePage() {
   const router = useRouter()
   const [managers, setManagers] = useState<Manager[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [lastUpdatedText, setLastUpdatedText] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -47,6 +48,7 @@ export default function LeaguePage() {
 
   useEffect(() => {
     fetchManagers()
+    fetchLastUpdated()
   }, [])
 
   const fetchManagers = async () => {
@@ -61,6 +63,21 @@ export default function LeaguePage() {
       console.error('Error fetching managers:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchLastUpdated = async () => {
+    try {
+      const response = await fetch('/api/league/last-updated')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.lastUpdatedAt) {
+          const dt = new Date(data.lastUpdatedAt)
+          setLastUpdatedText(dt.toLocaleString())
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching league last-updated time:', error)
     }
   }
 
@@ -122,6 +139,9 @@ export default function LeaguePage() {
             <CardDescription>
               Rankings based on total points across all phases
             </CardDescription>
+            <p className="mt-1 text-sm text-gray-500">
+              Last data update: {lastUpdatedText ?? 'Unknown'}
+            </p>
           </CardHeader>
           <CardContent>
             <Table>

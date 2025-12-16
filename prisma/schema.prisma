@@ -191,6 +191,14 @@ model GameweekPlayerPoints {
   @@unique([gameweekId, playerId])
 }
 
+// System metadata (e.g. data update timestamps)
+model DataUpdate {
+  id          String   @id @default(cuid())
+  type        String   // e.g. "FPL_FULL_UPDATE", "GW_PATCH"
+  description String?  // optional human-readable description
+  completedAt DateTime @default(now())
+}
+
 // NextAuth standard models (Prisma Adapter)
 model Account {
   id                String  @id @default(cuid())

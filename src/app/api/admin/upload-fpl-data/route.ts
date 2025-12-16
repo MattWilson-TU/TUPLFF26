@@ -124,7 +124,21 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ FPL data upload completed!')
 
-    return NextResponse.json({ 
+    // Record this database update
+    try {
+      await prisma.dataUpdate.create({
+        data: {
+          type: 'FPL_UPLOAD',
+          description: `Admin upload for gameweeks: ${gameweekIds.join(', ')}`,
+          // completedAt will default to now()
+        },
+      })
+      console.log('🕒 Recorded FPL data upload timestamp')
+    } catch (metaError) {
+      console.warn('⚠️ Failed to record FPL data upload timestamp:', metaError)
+    }
+
+    return NextResponse.json({
       success: true,
       message: 'FPL data uploaded successfully',
       summary: {
