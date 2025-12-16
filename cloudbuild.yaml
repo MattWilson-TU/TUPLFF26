@@ -36,7 +36,8 @@ steps:
           echo "ERROR: DATABASE_URL is not set!"
           exit 1
         else
-          echo "DATABASE_URL is set (length: ${#DATABASE_URL} characters)"
+          DB_LEN=$(echo -n "$DATABASE_URL" | wc -c)
+          echo "DATABASE_URL is set (length: $DB_LEN characters)"
           # Show first and last part for debugging (without password)
           echo "DATABASE_URL starts with: $(echo $DATABASE_URL | cut -d'@' -f1)@..."
         fi
