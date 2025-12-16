@@ -34,9 +34,6 @@ steps:
         npx prisma migrate deploy
     env:
       - 'DATABASE_URL=${_DATABASE_URL}'
-    volumes:
-      - name: 'cloudsql'
-        path: '/cloudsql'
 
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -61,6 +58,9 @@ steps:
 options:
   logging: CLOUD_LOGGING_ONLY
   substitution_option: 'ALLOW_LOOSE'
+  volumes:
+    - name: 'cloudsql'
+      path: '/cloudsql'
 
 substitutions:
   # Socket-based DATABASE_URL template for Cloud SQL (override when building to avoid committing secrets)
