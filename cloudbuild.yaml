@@ -32,8 +32,7 @@ steps:
         npm install
         npx prisma generate
         npx prisma migrate deploy
-    env:
-      - 'DATABASE_URL=${_DATABASE_URL}'
+    secretEnv: ['DATABASE_URL']
 
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -62,10 +61,19 @@ options:
     - name: 'cloudsql'
       path: '/cloudsql'
 
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/DATABASE_URL/versions/latest
+      env: 'DATABASE_URL'
+
 substitutions:
-  # Socket-based DATABASE_URL template for Cloud SQL (override when building to avoid committing secrets)
-  # Example:
-  #   gcloud builds submit --config cloudbuild.yaml \
-  #     --substitutions=_DATABASE_URL="postgresql://fpluser:Simple123@/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db"
-  _DATABASE_URL: 'postgresql://user:password@/dbname?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db'
+  # Socket-based DATABASE_URL template for Cloud SQL
+  # The actual DATABASE_URL is loaded from Secret Manager (configured above)
+  # Format: postgresql://USER:PASSWORD@/DATABASE?host=/cloudsql/INSTANCE_CONNECTION_NAME
+  # Example: postgresql://fpluser:Simple123@/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db
+  # 
+  # To set up Secret Manager:
+  # 1. Create the secret: gcloud secrets create DATABASE_URL --data-file=- <<< "postgresql://fpluser:Simple123@/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db"
+  # 2. Grant Cloud Build access: gcloud secrets add-iam-policy-binding DATABASE_URL --member="serviceAccount:PROJECT_NUMBER@cloudbuild.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
+  _DATABASE_URL: '${DATABASE_URL}'
 
