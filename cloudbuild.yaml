@@ -22,22 +22,6 @@ steps:
       'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/web-app:latest'
     ]
 
-  # Run Prisma migration before deploying
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        # Fetch DATABASE_URL from Secret Manager
-        export DATABASE_URL=$(gcloud secrets versions access latest --secret=DATABASE_URL --project=$PROJECT_ID)
-        echo "DATABASE_URL loaded from Secret Manager"
-        # Install Node.js and run migration
-        apt-get update && apt-get install -y nodejs npm
-        cd /workspace
-        npm install
-        npx prisma generate
-        npx prisma migrate deploy
-
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -54,17 +38,17 @@ steps:
       '--update-env-vars', 'NODE_ENV=production',
       '--update-env-vars', 'NEXTAUTH_URL=https://app.tuplff.co.uk',
       '--update-env-vars', 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID',
-      '--set-secrets', 'DATABASE_URL=DATABASE_URL:latest',
+      '--update-env-vars', 'DATABASE_URL=${_DATABASE_URL}',
       '--add-cloudsql-instances', 'tuplff25-26:europe-west2:fpl-auction-db'
     ]
 
 options:
   logging: CLOUD_LOGGING_ONLY
   substitution_option: 'ALLOW_LOOSE'
-  volumes:
-    - name: 'cloudsql'
-      path: '/cloudsql'
 
-# Note: DATABASE_URL is loaded from Secret Manager directly in the migration step
-# and via --set-secrets for Cloud Run deployment
-
+substitutions:
+  # Socket-based DATABASE_URL template for Cloud SQL (override when building to avoid committing secrets)
+  # Example:
+  #   gcloud builds submit --config cloudbuild.yaml \
+  #     --substitutions=_DATABASE_URL="postgresql://fpluser:Simple123@/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db"
+  _DATABASE_URL: 'postgresql://user:password@/dbname?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db'

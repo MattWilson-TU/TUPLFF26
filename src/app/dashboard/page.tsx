@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [passwordError, setPasswordError] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [currentPhase, setCurrentPhase] = useState<number | null>(null)
+  const [dataLastUpdated, setDataLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -118,6 +119,24 @@ export default function DashboardPage() {
       }
     }
     loadAuctionStatus()
+  }, [])
+
+  useEffect(() => {
+    async function loadDataLastUpdated() {
+      try {
+        const res = await fetch('/api/data/last-updated')
+        if (!res.ok) return
+        const data = await res.json()
+        if (data?.lastUpdated) {
+          setDataLastUpdated(data.lastUpdated)
+        } else {
+          setDataLastUpdated(null)
+        }
+      } catch (error) {
+        console.error('Failed to load data last updated timestamp', error)
+      }
+    }
+    loadDataLastUpdated()
   }, [])
 
   useEffect(() => {
@@ -219,6 +238,12 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">Latest GW may be in progress.</p>
+          {dataLastUpdated && (
+            <p className="text-xs text-gray-500 mt-1">
+              Data last updated:{' '}
+              {new Date(dataLastUpdated).toLocaleString()}
+            </p>
+          )}
         </div>
 
         {/* Auction Summary - Show when auction is closed */}

@@ -250,20 +250,6 @@ async function downloadAndUpdateFPLData() {
       const phase = data.gameweeks[gw].phase
       console.log(`  - GW${gw} (Phase ${phase}): ${playerCount} players`)
     }
-
-    // Record this database update
-    try {
-      await prisma.dataUpdate.create({
-        data: {
-          type: 'FPL_FULL_UPDATE',
-          description: `FPL data update for gameweeks: ${gameweekIdsSummary.join(', ')}`,
-          // completedAt will default to now()
-        },
-      })
-      console.log('🕒 Recorded data update timestamp')
-    } catch (metaError) {
-      console.warn('⚠️ Failed to record data update timestamp:', metaError.message || metaError)
-    }
     
   } catch (error) {
     console.error('❌ Error downloading/updating FPL data:', error)
@@ -274,4 +260,3 @@ async function downloadAndUpdateFPLData() {
 }
 
 downloadAndUpdateFPLData()
-

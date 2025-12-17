@@ -99,20 +99,6 @@ async function addGW4Data() {
     console.log(`🎯 Haaland total points: ${totalPoints}`)
     
     console.log('\n✅ GW4 data upload completed!')
-
-    // Record this database update
-    try {
-      await prisma.dataUpdate.create({
-        data: {
-          type: 'GW4_PATCH',
-          description: 'Manual GW4 data upload',
-          // completedAt will default to now()
-        },
-      })
-      console.log('🕒 Recorded GW4 data update timestamp')
-    } catch (metaError) {
-      console.warn('⚠️ Failed to record GW4 data update timestamp:', metaError.message || metaError)
-    }
     
   } catch (error) {
     console.error('❌ Error adding GW4 data:', error)
