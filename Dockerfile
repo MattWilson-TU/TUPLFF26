@@ -56,6 +56,9 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Copy scripts directory for Cloud Run Jobs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
+# Copy reset-admin-password.js for password reset functionality
+COPY --from=builder --chown=nextjs:nodejs /app/reset-admin-password.js ./reset-admin-password.js
+
 USER nextjs
 
 EXPOSE 3000
