@@ -50,5 +50,5 @@ substitutions:
   # Socket-based DATABASE_URL template for Cloud SQL (override when building to avoid committing secrets)
   # Example:
   #   gcloud builds submit --config cloudbuild.yaml \
-  #     --substitutions=_DATABASE_URL="postgresql://fpluser:Simple123@/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db"
-  _DATABASE_URL: 'postgresql://user:password@/dbname?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db'
+  #     --substitutions=_DATABASE_URL="postgresql://fpluser:Simple123@localhost:5432/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db"
+  _DATABASE_URL: 'postgresql://fpluser:Simple123@localhost:5432/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db'

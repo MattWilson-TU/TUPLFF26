@@ -194,6 +194,42 @@ node download-fpl-data.js
 3. Select the generated JSON file
 4. Wait for upload completion
 
+### Resetting Admin01 Password
+
+If you need to reset the Admin01 password, use the Cloud Run Job script:
+
+**Prerequisites:**
+- Docker image must include `reset-admin-password.js` (already included in Dockerfile)
+- Deployed image must be available in Artifact Registry
+
+**Steps:**
+
+1. **Ensure you're in the web-app-source directory:**
+   ```bash
+   cd web-app-source
+   ```
+
+2. **Run the reset script:**
+   ```bash
+   ./reset-admin-password-cloud.sh
+   ```
+
+   The script will:
+   - Use the default DATABASE_URL: `postgresql://fpluser:Simple123@localhost:5432/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db`
+   - Create or update a Cloud Run Job
+   - Execute the job to reset the password
+   - Display the logs
+
+3. **Login with:**
+   - Username: `Admin01`
+   - Password: `Password`
+
+**Note:** You can override the DATABASE_URL by setting it as an environment variable:
+```bash
+export DATABASE_URL='your-custom-database-url'
+./reset-admin-password-cloud.sh
+```
+
 ### Future-Proof Features
 - **Auto-detection**: Script automatically finds new gameweeks
 - **Phase mapping**: Correctly assigns gameweeks to phases (1-4)

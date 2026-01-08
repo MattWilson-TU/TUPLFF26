@@ -11,14 +11,10 @@ REGION="europe-west1"
 JOB_NAME="reset-admin-password-job"
 IMAGE_NAME="europe-west1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/web-app:latest"
 
-# Check if DATABASE_URL is set
-if [ -z "$DATABASE_URL" ]; then
-  echo "❌ Error: DATABASE_URL environment variable must be set"
-  echo ""
-  echo "For Cloud SQL, use:"
-  echo "  export DATABASE_URL='postgresql://fpluser:Simple123@/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db'"
-  exit 1
-fi
+# Set default DATABASE_URL if not provided
+DATABASE_URL="${DATABASE_URL:-postgresql://fpluser:Simple123@localhost:5432/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db}"
+
+echo "Using DATABASE_URL: ${DATABASE_URL}"
 
 echo "🔐 Creating Cloud Run Job to reset Admin01 password..."
 echo "Project: ${PROJECT_ID}"
