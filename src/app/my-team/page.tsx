@@ -365,20 +365,27 @@ export default function MyTeamPage() {
                                 const points = wd?.points || 0
                                 const counted = wd?.counted || false
                                 
+                                // Display logic: show 0 for zero, negative numbers for negative, positive for positive
+                                const displayPoints = points === 0 ? '0' : points.toString()
+                                
                                 return (
                                   <td
                                     key={gwId}
                                     className={`p-2 text-center border-r min-w-[50px] ${
                                       counted && points > 0
                                         ? 'bg-green-100 text-green-800 font-semibold'
+                                        : counted && points < 0
+                                        ? 'bg-green-50 text-red-600'
                                         : counted
                                         ? 'bg-green-50 text-gray-600'
                                         : points > 0
                                         ? 'text-gray-400'
+                                        : points < 0
+                                        ? 'text-gray-400'
                                         : 'text-gray-300'
                                     }`}
                                   >
-                                    {points > 0 ? points : '-'}
+                                    {displayPoints}
                                   </td>
                                 )
                               })}
