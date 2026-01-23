@@ -191,6 +191,13 @@ model GameweekPlayerPoints {
   @@unique([gameweekId, playerId])
 }
 
+// Singleton model to track latest data sync from Premier League API
+model DataSync {
+  id           String   @id @default("singleton")
+  lastSyncedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 // NextAuth standard models (Prisma Adapter)
 model Account {
   id                String  @id @default(cuid())

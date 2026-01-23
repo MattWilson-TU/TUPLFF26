@@ -243,14 +243,21 @@ async function downloadAndUpdateFPLData() {
     console.log(`  - Players: ${totalPlayers}`)
     console.log(`  - Point Entries: ${totalPoints}`)
     console.log(`  - Timestamp: ${data.timestamp}`)
-    
+
     const gameweekIdsSummary = Object.keys(data.gameweeks).sort((a, b) => parseInt(a) - parseInt(b))
     for (const gw of gameweekIdsSummary) {
       const playerCount = Object.keys(data.gameweeks[gw].players).length
       const phase = data.gameweeks[gw].phase
       console.log(`  - GW${gw} (Phase ${phase}): ${playerCount} players`)
     }
-    
+
+    // Record overall data sync timestamp for dashboard/league display
+    await prisma.dataSync.upsert({
+      where: { id: 'singleton' },
+      update: { lastSyncedAt: new Date() },
+      create: { id: 'singleton', lastSyncedAt: new Date() }
+    })
+
   } catch (error) {
     console.error('❌ Error downloading/updating FPL data:', error)
     process.exit(1)

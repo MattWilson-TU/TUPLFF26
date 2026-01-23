@@ -124,6 +124,13 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ FPL data upload completed!')
 
+    // Record overall data sync timestamp for manual admin uploads
+    await prisma.dataSync.upsert({
+      where: { id: 'singleton' },
+      update: { lastSyncedAt: new Date() },
+      create: { id: 'singleton', lastSyncedAt: new Date() }
+    })
+
     return NextResponse.json({ 
       success: true,
       message: 'FPL data uploaded successfully',
