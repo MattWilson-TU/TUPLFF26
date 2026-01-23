@@ -53,8 +53,8 @@ if gcloud run jobs describe "${JOB_NAME}" --region="${REGION}" --project="${PROJ
     --image="${IMAGE_NAME}" \
     --region="${REGION}" \
     --project="${PROJECT_ID}" \
-    --command="npx" \
-    --args="prisma","migrate","deploy" \
+    --command="prisma" \
+    --args="migrate","deploy" \
     --memory="512Mi" \
     --cpu="1" \
     --max-retries=1 \
@@ -69,8 +69,8 @@ else
     --image="${IMAGE_NAME}" \
     --region="${REGION}" \
     --project="${PROJECT_ID}" \
-    --command="npx" \
-    --args="prisma","migrate","deploy" \
+    --command="prisma" \
+    --args="migrate","deploy" \
     --memory="512Mi" \
     --cpu="1" \
     --max-retries=1 \

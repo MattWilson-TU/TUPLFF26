@@ -52,8 +52,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy Prisma files
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-# Copy Prisma CLI for migrations
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+# Copy Prisma CLI for migrations (entire package needed for Cloud Run Jobs)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+# Create .bin directory and copy Prisma binary with execute permissions
+RUN mkdir -p ./node_modules/.bin && chown nextjs:nodejs ./node_modules/.bin
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+RUN chmod +x ./node_modules/.bin/prisma
+# Ensure .bin directory is in PATH
+ENV PATH="/app/node_modules/.bin:${PATH}"
 
 # Copy scripts directory for Cloud Run Jobs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
