@@ -52,11 +52,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy Prisma files
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-# Install Prisma CLI in production for migrations (needed for Cloud Run Jobs)
-# This ensures all dependencies (@prisma/engines, etc.) are included
-RUN npm install -g prisma@6.15.0
-# Ensure Prisma is in PATH
-ENV PATH="/usr/local/bin:${PATH}"
 
 # Copy scripts directory for Cloud Run Jobs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts

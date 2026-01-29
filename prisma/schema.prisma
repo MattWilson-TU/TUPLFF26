@@ -1,8 +1,5 @@
-// Prisma schema for Fantasy Football Auction & Season Manager
-// PostgreSQL provider
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl"]
 }
 
@@ -11,206 +8,159 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enumerations
-enum Position {
-  GK
-  DEF
-  MID
-  FWD
-}
-
-enum AuctionStatus {
-  OPEN
-  CLOSED
-  COMPLETED
-}
-
-// Core user/manager
 model Manager {
-  id             String    @id @default(cuid())
-  username       String    @unique
-  name           String
-  passwordHash   String
-  // For simplicity store budget in thousands of pounds (k£). E.g. £150,000k initial. Step is £500k.
-  // budgetKGBP represents thousand pounds.
-  budgetKGBP     Int
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  squads         Squad[]
-  bids           Bid[]
-  transfers      Transfer[]
-  ownedPlayers   Player[]  // Players currently owned by this manager
-  wonLots        AuctionLot[] // Auction lots won by this manager
-
-  // NextAuth fields (optional flexibility if switching to OAuth later)
-  accounts       Account[]
-  sessions       Session[]
+  id           String       @id @default(cuid())
+  name         String
+  passwordHash String
+  budgetKGBP   Int
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  username     String       @unique
+  accounts     Account[]
+  wonLots      AuctionLot[]
+  bids         Bid[]
+  ownedPlayers Player[]
+  sessions     Session[]
+  squads       Squad[]
+  transfers    Transfer[]
 }
 
-// Player mirrored from FPL bootstrap-static
 model Player {
-  id            Int      @id // FPL "id"
-  firstName     String
-  secondName    String
-  webName       String?
-  elementType   Position
-  nowCostHalfM  Int      // now_cost in 0.1m -> convert to nearest 0.5m, store as half-million units
-  teamId        Int
-  team          Team     @relation(fields: [teamId], references: [id])
-  totalPoints   Int      @default(0)
-  photo         String
-
-  // Ownership: Which manager currently owns this player in the active phase
-  currentOwnerId String?  @db.VarChar(191)
-  currentOwner   Manager? @relation(fields: [currentOwnerId], references: [id])
-
-  squadPlayers  SquadPlayer[]
+  id             Int                    @id
+  firstName      String
+  secondName     String
+  elementType    Position
+  nowCostHalfM   Int
+  teamId         Int
+  totalPoints    Int                    @default(0)
+  photo          String
+  currentOwnerId String?                @db.VarChar(191)
+  webName        String?
+  auctionLots    AuctionLot[]
   gameweekPoints GameweekPlayerPoints[]
-  auctionLots   AuctionLot[] // Auction lots for this player
-  transfersOut  Transfer[] @relation("TransferOut") // Transfers where this player was sold
-  transfersIn   Transfer[] @relation("TransferIn")  // Transfers where this player was bought
+  currentOwner   Manager?               @relation(fields: [currentOwnerId], references: [id])
+  team           Team                   @relation(fields: [teamId], references: [id])
+  squadPlayers   SquadPlayer[]
+  transfersIn    Transfer[]             @relation("TransferIn")
+  transfersOut   Transfer[]             @relation("TransferOut")
 }
 
 model Team {
-  id    Int     @id // FPL team id
-  name  String
-  code  Int?
+  id        Int      @id
+  name      String
+  code      Int?
   shortName String?
-
-  players Player[]
+  players   Player[]
 }
 
-// Squad for a manager in a given phase (1..4). 11 players.
 model Squad {
-  id          String    @id @default(cuid())
-  manager     Manager   @relation(fields: [managerId], references: [id])
+  id          String        @id @default(cuid())
   managerId   String
-  phase       Int       // 1..4
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
+  phase       Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  totalPoints Int           @default(0)
+  manager     Manager       @relation(fields: [managerId], references: [id])
   players     SquadPlayer[]
-  totalPoints Int       @default(0)
 
   @@unique([managerId, phase])
 }
 
 model SquadPlayer {
-  id        String  @id @default(cuid())
-  squad     Squad   @relation(fields: [squadId], references: [id])
-  squadId   String
-  player    Player  @relation(fields: [playerId], references: [id])
-  playerId  Int
-  // position in formation is derived from Player.elementType; optional slot index for UI
-  slot      Int?
-  // price in half-million units, defaulting to 0 for compatibility.
-  feeHalfM  Int     @default(0)
+  id       String @id @default(cuid())
+  squadId  String
+  playerId Int
+  slot     Int?
+  feeHalfM Int    @default(0)
+  player   Player @relation(fields: [playerId], references: [id])
+  squad    Squad  @relation(fields: [squadId], references: [id])
 
   @@unique([squadId, playerId])
 }
 
-// Auction entities
 model Auction {
-  id          String        @id @default(cuid())
-  status      AuctionStatus @default(OPEN)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  // optional phase this auction is for (initial squads or transfer window auction)
-  phase       Int           @default(1)
-  // target number of players per manager
-  targetSize  Int           @default(11)
-  // current lot being auctioned
+  id           String        @id @default(cuid())
+  status       AuctionStatus @default(OPEN)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  phase        Int           @default(1)
+  targetSize   Int           @default(11)
   currentLotId String?
-
-  lots        AuctionLot[]
+  lots         AuctionLot[]
 }
 
 model AuctionLot {
-  id          String   @id @default(cuid())
-  auction     Auction  @relation(fields: [auctionId], references: [id])
-  auctionId   String
-  player      Player   @relation(fields: [playerId], references: [id])
-  playerId    Int
-  isSold      Boolean  @default(false)
-  soldPriceHalfM Int?  // price in half-million units
-  winnerId    String?
-  winner      Manager? @relation(fields: [winnerId], references: [id])
-
-  bids        Bid[]
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  auctionId      String
+  playerId       Int
+  isSold         Boolean  @default(false)
+  soldPriceHalfM Int?
+  winnerId       String?
+  createdAt      DateTime @default(now())
+  auction        Auction  @relation(fields: [auctionId], references: [id])
+  player         Player   @relation(fields: [playerId], references: [id])
+  winner         Manager? @relation(fields: [winnerId], references: [id])
+  bids           Bid[]
 }
 
 model Bid {
-  id           String   @id @default(cuid())
-  lot          AuctionLot @relation(fields: [lotId], references: [id])
-  lotId        String
-  manager      Manager  @relation(fields: [managerId], references: [id])
-  managerId    String
-  // amount in half-million units (e.g., £0.5m -> 1, £1.0m -> 2)
-  amountHalfM  Int
-  createdAt    DateTime @default(now())
+  id          String     @id @default(cuid())
+  lotId       String
+  managerId   String
+  amountHalfM Int
+  createdAt   DateTime   @default(now())
+  lot         AuctionLot @relation(fields: [lotId], references: [id])
+  manager     Manager    @relation(fields: [managerId], references: [id])
 
   @@index([lotId])
   @@index([managerId])
 }
 
-// Transfers between phases
 model Transfer {
-  id            String   @id @default(cuid())
-  manager       Manager  @relation(fields: [managerId], references: [id])
-  managerId     String
-  phaseFrom     Int
-  phaseTo       Int
-  outPlayer     Player   @relation("TransferOut", fields: [outPlayerId], references: [id])
-  outPlayerId   Int
-  inPlayer      Player   @relation("TransferIn", fields: [inPlayerId], references: [id])
-  inPlayerId    Int
-  priceDiffHalfM Int     @default(0)
-  createdAt     DateTime @default(now())
+  id             String   @id @default(cuid())
+  managerId      String
+  phaseFrom      Int
+  phaseTo        Int
+  outPlayerId    Int
+  inPlayerId     Int
+  priceDiffHalfM Int      @default(0)
+  createdAt      DateTime @default(now())
+  inPlayer       Player   @relation("TransferIn", fields: [inPlayerId], references: [id])
+  manager        Manager  @relation(fields: [managerId], references: [id])
+  outPlayer      Player   @relation("TransferOut", fields: [outPlayerId], references: [id])
 }
 
-// Gameweek and scoring
 model Gameweek {
-  id           Int      @id // 1..38
+  id           Int                    @id
   phase        Int
   startedAt    DateTime?
   completedAt  DateTime?
-
   playerPoints GameweekPlayerPoints[]
 }
 
 model GameweekPlayerPoints {
-  id          String   @id @default(cuid())
-  gameweek    Gameweek @relation(fields: [gameweekId], references: [id])
-  gameweekId  Int
-  player      Player   @relation(fields: [playerId], references: [id])
-  playerId    Int
-  points      Int      @default(0)
+  id         String   @id @default(cuid())
+  gameweekId Int
+  playerId   Int
+  points     Int      @default(0)
+  gameweek   Gameweek @relation(fields: [gameweekId], references: [id])
+  player     Player   @relation(fields: [playerId], references: [id])
 
   @@unique([gameweekId, playerId])
 }
 
-// Singleton model to track latest data sync from Premier League API
-model DataSync {
-  id           String   @id @default("singleton")
-  lastSyncedAt DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-// NextAuth standard models (Prisma Adapter)
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
   user              Manager @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -231,4 +181,17 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum Position {
+  GK
+  DEF
+  MID
+  FWD
+}
+
+enum AuctionStatus {
+  OPEN
+  CLOSED
+  COMPLETED
 }

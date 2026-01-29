@@ -250,14 +250,7 @@ async function downloadAndUpdateFPLData() {
       const phase = data.gameweeks[gw].phase
       console.log(`  - GW${gw} (Phase ${phase}): ${playerCount} players`)
     }
-
-    // Record overall data sync timestamp for dashboard/league display
-    await prisma.dataSync.upsert({
-      where: { id: 'singleton' },
-      update: { lastSyncedAt: new Date() },
-      create: { id: 'singleton', lastSyncedAt: new Date() }
-    })
-
+    
   } catch (error) {
     console.error('❌ Error downloading/updating FPL data:', error)
     process.exit(1)
