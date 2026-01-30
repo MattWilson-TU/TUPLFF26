@@ -80,30 +80,9 @@ async function downloadAndUpdateFPLData() {
       .sort((a, b) => a - b)
     
     console.log(`📅 Found ${availableGameweeks.length} available gameweeks: ${availableGameweeks.join(', ')}`)
-
-    const lastWeekResult = await prisma.gameweekPlayerPoints.aggregate({
-      _max: { gameweekId: true }
-    })
-    const lastWeekWithData = lastWeekResult?._max?.gameweekId || null
-
-    let gameweeksToDownload = []
-    if (!lastWeekWithData) {
-      gameweeksToDownload = availableGameweeks
-    } else {
-      gameweeksToDownload = availableGameweeks.filter(gw => gw >= lastWeekWithData)
-      if (!availableGameweeks.includes(lastWeekWithData)) {
-        gameweeksToDownload = [lastWeekWithData, ...gameweeksToDownload]
-          .sort((a, b) => a - b)
-      }
-    }
-
-    console.log(
-      `🧭 Last week with data: ${lastWeekWithData ?? 'none'}, ` +
-      `downloading: ${gameweeksToDownload.join(', ') || 'none'}`
-    )
     
-    // Download live data for each required gameweek
-    for (const gw of gameweeksToDownload) {
+    // Download live data for each available gameweek
+    for (const gw of availableGameweeks) {
       console.log(`📈 Downloading Gameweek ${gw} live data...`)
       
       try {
@@ -219,10 +198,6 @@ async function downloadAndUpdateFPLData() {
         where: { id: gameweekId },
         update: { phase: gwData.phase },
         create: { id: gameweekId, phase: gwData.phase }
-      })
-
-      await prisma.gameweekPlayerPoints.deleteMany({
-        where: { gameweekId: gameweekId }
       })
 
       // Process players in batches to avoid timeout
