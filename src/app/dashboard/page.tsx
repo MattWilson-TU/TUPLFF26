@@ -403,6 +403,26 @@ export default function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                🌍 WC2026 Predictor
+                <Badge variant="secondary">World Cup</Badge>
+              </CardTitle>
+              <CardDescription>
+                Predict World Cup scores and compete separately
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-4">
+                Predict full-time scores for all 104 World Cup fixtures. 3 pts exact, 1 pt correct outcome.
+              </p>
+              <Button asChild className="w-full">
+                <Link href="/wc2026">Open Predictor</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Settings Modal */}

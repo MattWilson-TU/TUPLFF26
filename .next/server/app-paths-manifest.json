@@ -1,0 +1,10 @@
+{
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/auction/current/route": "app/api/auction/current/route.js",
+  "/api/gameweek/current-phase/route": "app/api/gameweek/current-phase/route.js",
+  "/api/data/last-updated/route": "app/api/data/last-updated/route.js",
+  "/page": "app/page.js",
+  "/auth/signin/page": "app/auth/signin/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}

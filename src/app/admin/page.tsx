@@ -23,6 +23,8 @@ export default function AdminPage() {
   const [uploadProgress, setUploadProgress] = useState<string>('')
   const [isCloudUpdating, setIsCloudUpdating] = useState(false)
   const [cloudUpdateProgress, setCloudUpdateProgress] = useState<string>('')
+  const [isWc2026Updating, setIsWc2026Updating] = useState(false)
+  const [wc2026UpdateProgress, setWc2026UpdateProgress] = useState<string>('')
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin')
@@ -234,6 +236,71 @@ export default function AdminPage() {
   }
 
 
+  async function syncWc2026Data() {
+    if (!confirm('Sync WC2026 fixtures from football-data.org now?')) {
+      return
+    }
+
+    try {
+      setIsWc2026Updating(true)
+      setWc2026UpdateProgress('Syncing fixtures...')
+
+      const res = await fetch('/api/admin/wc2026-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        setWc2026UpdateProgress(`Synced ${result.fixtures} fixtures`)
+        alert(`WC2026 sync complete — ${result.fixtures} fixtures loaded.`)
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Failed to sync WC2026 data')
+        setWc2026UpdateProgress('')
+      }
+    } catch (error) {
+      console.error('Error syncing WC2026 data:', error)
+      alert('Failed to sync WC2026 data')
+      setWc2026UpdateProgress('')
+    } finally {
+      setIsWc2026Updating(false)
+    }
+  }
+
+  async function cloudUpdateWc2026Data() {
+    if (!confirm('Trigger a WC2026 fixture sync from football-data.org?')) {
+      return
+    }
+
+    try {
+      setIsWc2026Updating(true)
+      setWc2026UpdateProgress('Triggering WC2026 update job...')
+
+      const res = await fetch('/api/admin/wc2026-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        setWc2026UpdateProgress(`Job triggered: ${result.execution.name}`)
+        alert('WC2026 update job triggered successfully!')
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Failed to trigger WC2026 update')
+        setWc2026UpdateProgress('')
+      }
+    } catch (error) {
+      console.error('Error triggering WC2026 update:', error)
+      alert('Failed to trigger WC2026 update')
+      setWc2026UpdateProgress('')
+    } finally {
+      setIsWc2026Updating(false)
+    }
+  }
+
+
   if (status === 'loading') return null
 
   return (
@@ -302,6 +369,12 @@ export default function AdminPage() {
                 <Button onClick={cloudUpdateFPLData} disabled={isCloudUpdating} variant="outline">
                   {isCloudUpdating ? 'Triggering...' : '☁️ Cloud Update'}
                 </Button>
+                <Button onClick={syncWc2026Data} disabled={isWc2026Updating} variant="outline">
+                  {isWc2026Updating ? 'Syncing...' : '🌍 Sync WC2026'}
+                </Button>
+                <Button onClick={cloudUpdateWc2026Data} disabled={isWc2026Updating} variant="outline">
+                  {isWc2026Updating ? 'Triggering...' : '☁️ Cloud WC2026'}
+                </Button>
                 {isRefreshingScores && (
                   <span className="text-sm text-gray-600">{refreshProgress}</span>
                 )}
@@ -310,6 +383,9 @@ export default function AdminPage() {
                 )}
                 {isCloudUpdating && (
                   <span className="text-sm text-gray-600">{cloudUpdateProgress}</span>
+                )}
+                {isWc2026Updating && (
+                  <span className="text-sm text-gray-600">{wc2026UpdateProgress}</span>
                 )}
               </div>
               <div className="flex gap-2">

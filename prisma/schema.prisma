@@ -21,8 +21,9 @@ model Manager {
   bids         Bid[]
   ownedPlayers Player[]
   sessions     Session[]
-  squads       Squad[]
-  transfers    Transfer[]
+  squads         Squad[]
+  transfers      Transfer[]
+  wcPredictions  WcPrediction[]
 }
 
 model Player {
@@ -150,6 +151,43 @@ model GameweekPlayerPoints {
 }
 
 model DataSync {
+  id           String   @id @default("singleton")
+  lastSyncedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model WcFixture {
+  id          String         @id
+  homeTeam    String
+  awayTeam    String
+  homeCrest   String?
+  awayCrest   String?
+  kickoffUtc  DateTime
+  stage       String?
+  groupName   String?
+  matchday    Int?
+  status      String
+  homeScore90 Int?
+  awayScore90 Int?
+  updatedAt   DateTime       @updatedAt
+  predictions WcPrediction[]
+}
+
+model WcPrediction {
+  id        String    @id @default(cuid())
+  managerId String
+  fixtureId String
+  homeScore Int
+  awayScore Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  manager   Manager   @relation(fields: [managerId], references: [id])
+  fixture   WcFixture @relation(fields: [fixtureId], references: [id])
+
+  @@unique([managerId, fixtureId])
+}
+
+model WcDataSync {
   id           String   @id @default("singleton")
   lastSyncedAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
