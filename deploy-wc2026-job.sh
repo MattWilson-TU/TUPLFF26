@@ -9,6 +9,7 @@ REGION="${GOOGLE_CLOUD_REGION:-europe-west1}"
 JOB_NAME="wc2026-update-job"
 SERVICE_NAME="web-app"
 IMAGE_NAME="europe-west1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/web-app:latest"
+CLOUDSQL_INSTANCE="${CLOUDSQL_INSTANCE:-tuplff25-26:europe-west2:fpl-auction-db}"
 
 if [ -z "$PROJECT_ID" ]; then
   echo "Error: GOOGLE_CLOUD_PROJECT or GCLOUD_PROJECT environment variable must be set"
@@ -17,6 +18,11 @@ fi
 
 if [ -z "$FOOTBALL_DATA_API_TOKEN" ]; then
   echo "Error: FOOTBALL_DATA_API_TOKEN environment variable must be set"
+  exit 1
+fi
+
+if [ -z "$DATABASE_URL" ]; then
+  echo "Error: DATABASE_URL environment variable must be set"
   exit 1
 fi
 
@@ -53,7 +59,8 @@ if gcloud run jobs describe "${JOB_NAME}" --region="${REGION}" --project="${PROJ
     --task-timeout=600 \
     --set-env-vars="NODE_ENV=production" \
     --set-env-vars="DATABASE_URL=${DATABASE_URL}" \
-    --set-env-vars="FOOTBALL_DATA_API_TOKEN=${FOOTBALL_DATA_API_TOKEN}"
+    --set-env-vars="FOOTBALL_DATA_API_TOKEN=${FOOTBALL_DATA_API_TOKEN}" \
+    --set-cloudsql-instances="${CLOUDSQL_INSTANCE}"
 else
   echo "Creating new job ${JOB_NAME}..."
   gcloud run jobs create "${JOB_NAME}" \
@@ -68,7 +75,8 @@ else
     --task-timeout=600 \
     --set-env-vars="NODE_ENV=production" \
     --set-env-vars="DATABASE_URL=${DATABASE_URL}" \
-    --set-env-vars="FOOTBALL_DATA_API_TOKEN=${FOOTBALL_DATA_API_TOKEN}"
+    --set-env-vars="FOOTBALL_DATA_API_TOKEN=${FOOTBALL_DATA_API_TOKEN}" \
+    --set-cloudsql-instances="${CLOUDSQL_INSTANCE}"
 fi
 
 echo ""

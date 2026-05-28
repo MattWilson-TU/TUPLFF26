@@ -11,13 +11,15 @@ function mapMatchToFixtureFields(match) {
   const finished = match.status === 'FINISHED'
   const home = match.score?.fullTime?.home
   const away = match.score?.fullTime?.away
+  const homeTeamName = match.homeTeam?.name || match.homeTeam?.shortName || 'TBD'
+  const awayTeamName = match.awayTeam?.name || match.awayTeam?.shortName || 'TBD'
 
   return {
     id: String(match.id),
-    homeTeam: match.homeTeam.name,
-    awayTeam: match.awayTeam.name,
-    homeCrest: match.homeTeam.crest,
-    awayCrest: match.awayTeam.crest,
+    homeTeam: homeTeamName,
+    awayTeam: awayTeamName,
+    homeCrest: match.homeTeam?.crest ?? null,
+    awayCrest: match.awayTeam?.crest ?? null,
     kickoffUtc: new Date(match.utcDate),
     stage: match.stage,
     groupName: match.group,
