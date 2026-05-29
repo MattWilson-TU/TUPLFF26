@@ -17,6 +17,12 @@ export default function DashboardPage() {
 
   // All state declarations must be at the top
   const [quickStats, setQuickStats] = useState<{ position: number | null; totalPoints: number; last3ByGw: { gameweekId: number; points: number }[] } | null>(null)
+  const [wc2026Summary, setWc2026Summary] = useState<{
+    position: number | null
+    totalPoints: number
+    predictionsMade: number
+  } | null>(null)
+  const [wc2026LastUpdated, setWc2026LastUpdated] = useState<string | null>(null)
   const [auctionStatus, setAuctionStatus] = useState<'OPEN' | 'CLOSED' | null>(null)
   const [myPlayers, setMyPlayers] = useState<Array<{
     id: number
@@ -108,6 +114,46 @@ export default function DashboardPage() {
       if (res.ok) setQuickStats(await res.json())
     }
     loadQuickStats()
+  }, [session])
+
+  useEffect(() => {
+    async function loadWc2026Summary() {
+      if (!session?.user?.id) return
+      try {
+        const [standingsRes, updatedRes] = await Promise.all([
+          fetch('/api/wc2026/standings'),
+          fetch('/api/wc2026/last-updated'),
+        ])
+        if (standingsRes.ok) {
+          const standings: Array<{
+            id: string
+            totalPoints: number
+            predictionsMade: number
+          }> = await standingsRes.json()
+          const idx = standings.findIndex((s) => s.id === session.user.id)
+          if (idx >= 0) {
+            setWc2026Summary({
+              position: idx + 1,
+              totalPoints: standings[idx].totalPoints,
+              predictionsMade: standings[idx].predictionsMade,
+            })
+          } else {
+            setWc2026Summary({
+              position: null,
+              totalPoints: 0,
+              predictionsMade: 0,
+            })
+          }
+        }
+        if (updatedRes.ok) {
+          const data = await updatedRes.json()
+          setWc2026LastUpdated(data.lastUpdated ?? null)
+        }
+      } catch (error) {
+        console.error('Failed to load WC2026 summary', error)
+      }
+    }
+    loadWc2026Summary()
   }, [session])
 
   useEffect(() => {
@@ -212,36 +258,35 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Stats at the top */}
+        {/* WC2026 summary at the top */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Quick Stats</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">WC2026 Predictor</h2>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/wc2026">Open Predictor</Link>
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="text-center">
-              <p className="text-sm text-gray-600">Position</p>
-              <p className="text-2xl font-bold text-blue-600">{quickStats?.position ?? '-'}</p>
+              <p className="text-sm text-gray-600">Standings position</p>
+              <p className="text-2xl font-bold text-blue-600">{wc2026Summary?.position ?? '-'}</p>
             </div>
             <div className="text-center">
-              <p className="text-sm text-gray-600">Total Points</p>
-              <p className="text-2xl font-bold text-purple-600">{quickStats?.totalPoints ?? 0}</p>
+              <p className="text-sm text-gray-600">Points scored</p>
+              <p className="text-2xl font-bold text-purple-600">{wc2026Summary?.totalPoints ?? 0}</p>
             </div>
             <div className="text-center">
-              <p className="text-sm text-gray-600">GW {last3[0]?.gameweekId ?? '-'} Points</p>
-              <p className="text-2xl font-bold text-green-600">{last3[0]?.points ?? 0}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-600">GW {last3[1]?.gameweekId ?? '-'} Points</p>
-              <p className="text-2xl font-bold text-green-600">{last3[1]?.points ?? 0}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-600">GW {last3[2]?.gameweekId ?? '-'} Points</p>
-              <p className="text-2xl font-bold text-green-600">{last3[2]?.points ?? 0}</p>
+              <p className="text-sm text-gray-600">Predictions made</p>
+              <p className="text-2xl font-bold text-green-600">{wc2026Summary?.predictionsMade ?? 0}</p>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-2">Latest GW may be in progress.</p>
-          {dataLastUpdated && (
+          <p className="text-xs text-gray-500 mt-2">
+            Separate ranking from the main league — 3 pts exact score, 1 pt correct outcome.
+          </p>
+          {wc2026LastUpdated && (
             <p className="text-xs text-gray-500 mt-1">
-              Data last updated:{' '}
-              {new Date(dataLastUpdated).toLocaleString()}
+              Fixtures last updated:{' '}
+              {new Date(wc2026LastUpdated).toLocaleString('en-GB', { timeZone: 'Europe/London' })} BST
             </p>
           )}
         </div>
@@ -292,19 +337,19 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                🏆 League Table
-                <Badge variant="secondary">Live</Badge>
+                🌍 WC2026 Predictor
+                <Badge variant="secondary">World Cup</Badge>
               </CardTitle>
               <CardDescription>
-                Current standings and points
+                Predict World Cup scores and compete separately
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                View the current league table.
+                Predict full-time scores for all 104 World Cup fixtures. 3 pts exact, 1 pt correct outcome.
               </p>
               <Button asChild className="w-full">
-                <Link href="/league">View League</Link>
+                <Link href="/wc2026">Open Predictor</Link>
               </Button>
             </CardContent>
           </Card>
@@ -407,22 +452,56 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                🌍 WC2026 Predictor
-                <Badge variant="secondary">World Cup</Badge>
+                🏆 League Table
+                <Badge variant="secondary">Live</Badge>
               </CardTitle>
               <CardDescription>
-                Predict World Cup scores and compete separately
+                Current standings and points
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Predict full-time scores for all 104 World Cup fixtures. 3 pts exact, 1 pt correct outcome.
+                View the current league table.
               </p>
               <Button asChild className="w-full">
-                <Link href="/wc2026">Open Predictor</Link>
+                <Link href="/league">View League</Link>
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Quick Stats at the bottom */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Quick Stats</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Position</p>
+              <p className="text-2xl font-bold text-blue-600">{quickStats?.position ?? '-'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Total Points</p>
+              <p className="text-2xl font-bold text-purple-600">{quickStats?.totalPoints ?? 0}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">GW {last3[0]?.gameweekId ?? '-'} Points</p>
+              <p className="text-2xl font-bold text-green-600">{last3[0]?.points ?? 0}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">GW {last3[1]?.gameweekId ?? '-'} Points</p>
+              <p className="text-2xl font-bold text-green-600">{last3[1]?.points ?? 0}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">GW {last3[2]?.gameweekId ?? '-'} Points</p>
+              <p className="text-2xl font-bold text-green-600">{last3[2]?.points ?? 0}</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Latest GW may be in progress.</p>
+          {dataLastUpdated && (
+            <p className="text-xs text-gray-500 mt-1">
+              Data last updated:{' '}
+              {new Date(dataLastUpdated).toLocaleString()}
+            </p>
+          )}
         </div>
 
         {/* Settings Modal */}

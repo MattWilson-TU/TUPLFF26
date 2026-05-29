@@ -201,6 +201,8 @@ export default function Wc2026Page() {
             <CardTitle>Fixtures</CardTitle>
             <CardDescription>
               Kickoff times shown in BST. Predictions lock at kickoff.
+              <br />
+              Result after 90 minutes
             </CardDescription>
           </CardHeader>
           <CardContent>
