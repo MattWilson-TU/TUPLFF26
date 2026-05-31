@@ -35,6 +35,25 @@ interface Fixture {
   points: number | null
 }
 
+function getFixturePanelClass(fixture: Fixture): string {
+  const base =
+    'border rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between'
+
+  if (!fixture.finished || fixture.homeScore90 === null || fixture.awayScore90 === null) {
+    return `${base} bg-white`
+  }
+
+  if (fixture.points === 3) return `${base} bg-green-100 border-green-200`
+  if (fixture.points === 1) return `${base} bg-yellow-50 border-yellow-200`
+  return `${base} bg-gray-100 border-gray-200`
+}
+
+function getPointsBadgeClass(points: number): string {
+  if (points === 3) return 'bg-green-600'
+  if (points === 1) return 'bg-yellow-400 text-yellow-950 hover:bg-yellow-400'
+  return 'bg-gray-400 hover:bg-gray-400'
+}
+
 export default function Wc2026Page() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -87,6 +106,15 @@ export default function Wc2026Page() {
     if (session) loadData()
   }, [session, loadData])
 
+  function scrollToNextFixture() {
+    const next = fixtures.find((f) => !f.locked)
+    if (!next) return
+    document.getElementById(`fixture-${next.id}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+  }
+
   async function savePrediction(fixtureId: string) {
     const draft = draftScores[fixtureId]
     if (!draft) return
@@ -131,6 +159,7 @@ export default function Wc2026Page() {
   if (!session) return null
 
   const myStanding = standings.find((s) => s.username === session.user?.username)
+  const nextOpenFixture = fixtures.find((f) => !f.locked)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -153,9 +182,16 @@ export default function Wc2026Page() {
                 </p>
               )}
             </div>
-            <Button asChild variant="outline">
-              <Link href="/dashboard">← Back to Dashboard</Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {nextOpenFixture && (
+                <Button onClick={scrollToNextFixture}>
+                  Next fixture — {nextOpenFixture.homeTeam} vs {nextOpenFixture.awayTeam}
+                </Button>
+              )}
+              <Button asChild variant="outline">
+                <Link href="/dashboard">← Back to Dashboard</Link>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -218,8 +254,9 @@ export default function Wc2026Page() {
 
                   return (
                     <div
+                      id={`fixture-${fixture.id}`}
                       key={fixture.id}
-                      className="border rounded-lg p-4 bg-white flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+                      className={`${getFixturePanelClass(fixture)} scroll-mt-24`}
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -232,7 +269,9 @@ export default function Wc2026Page() {
                             <Badge>Open</Badge>
                           )}
                           {fixture.points !== null && (
-                            <Badge className="bg-green-600">{fixture.points} pts</Badge>
+                            <Badge className={getPointsBadgeClass(fixture.points)}>
+                              {fixture.points} pts
+                            </Badge>
                           )}
                         </div>
                         <p className="text-sm text-gray-500">{fixture.kickoffBst} BST</p>
