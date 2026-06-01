@@ -1,5 +1,12 @@
 const FOOTBALL_DATA_BASE = 'https://api.football-data.org/v4'
 
+type FootballDataScoreLine = {
+  home?: number | null
+  away?: number | null
+  homeTeam?: number | null
+  awayTeam?: number | null
+} | null
+
 export interface FootballDataMatch {
   id: number
   utcDate: string
@@ -7,11 +14,38 @@ export interface FootballDataMatch {
   stage: string | null
   group: string | null
   matchday: number | null
-  homeTeam: { name: string; crest: string | null }
-  awayTeam: { name: string; crest: string | null }
-  score: {
-    fullTime: { home: number | null; away: number | null }
+  homeTeam: { name: string; shortName?: string; crest: string | null }
+  awayTeam: { name: string; shortName?: string; crest: string | null }
+  score?: {
+    duration?: string | null
+    fullTime?: FootballDataScoreLine
+    regularTime?: FootballDataScoreLine
+  } | null
+}
+
+function readScoreLine(line: FootballDataScoreLine): { home: number | null; away: number | null } {
+  if (!line) return { home: null, away: null }
+  const home = line.home ?? line.homeTeam ?? null
+  const away = line.away ?? line.awayTeam ?? null
+  return { home, away }
+}
+
+export function extractScore90(match: FootballDataMatch): { home: number | null; away: number | null } {
+  if (match.status !== 'FINISHED') {
+    return { home: null, away: null }
   }
+
+  const regular = readScoreLine(match.score?.regularTime)
+  if (regular.home !== null && regular.away !== null) {
+    return regular
+  }
+
+  const full = readScoreLine(match.score?.fullTime)
+  if (full.home !== null && full.away !== null) {
+    return full
+  }
+
+  return { home: null, away: null }
 }
 
 export interface FootballDataMatchesResponse {
@@ -34,9 +68,7 @@ export async function fetchWorldCup2026Matches(token: string): Promise<FootballD
 }
 
 export function mapMatchToFixtureFields(match: FootballDataMatch) {
-  const finished = match.status === 'FINISHED'
-  const home = match.score?.fullTime?.home
-  const away = match.score?.fullTime?.away
+  const { home, away } = extractScore90(match)
   const homeTeamName = match.homeTeam?.name || match.homeTeam?.shortName || 'TBD'
   const awayTeamName = match.awayTeam?.name || match.awayTeam?.shortName || 'TBD'
 
@@ -51,7 +83,7 @@ export function mapMatchToFixtureFields(match: FootballDataMatch) {
     groupName: match.group,
     matchday: match.matchday,
     status: match.status,
-    homeScore90: finished && home !== null && away !== null ? home : null,
-    awayScore90: finished && home !== null && away !== null ? away : null,
+    homeScore90: home,
+    awayScore90: away,
   }
 }

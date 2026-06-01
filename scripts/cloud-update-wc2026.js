@@ -7,10 +7,34 @@ const prisma = new PrismaClient({ log: ['error'] })
 
 const FOOTBALL_DATA_BASE = 'https://api.football-data.org/v4'
 
+function readScoreLine(line) {
+  if (!line) return { home: null, away: null }
+  return {
+    home: line.home ?? line.homeTeam ?? null,
+    away: line.away ?? line.awayTeam ?? null,
+  }
+}
+
+function extractScore90(match) {
+  if (match.status !== 'FINISHED') {
+    return { home: null, away: null }
+  }
+
+  const regular = readScoreLine(match.score?.regularTime)
+  if (regular.home !== null && regular.away !== null) {
+    return regular
+  }
+
+  const full = readScoreLine(match.score?.fullTime)
+  if (full.home !== null && full.away !== null) {
+    return full
+  }
+
+  return { home: null, away: null }
+}
+
 function mapMatchToFixtureFields(match) {
-  const finished = match.status === 'FINISHED'
-  const home = match.score?.fullTime?.home
-  const away = match.score?.fullTime?.away
+  const { home, away } = extractScore90(match)
   const homeTeamName = match.homeTeam?.name || match.homeTeam?.shortName || 'TBD'
   const awayTeamName = match.awayTeam?.name || match.awayTeam?.shortName || 'TBD'
 
@@ -25,8 +49,8 @@ function mapMatchToFixtureFields(match) {
     groupName: match.group,
     matchday: match.matchday,
     status: match.status,
-    homeScore90: finished && home !== null && away !== null ? home : null,
-    awayScore90: finished && home !== null && away !== null ? away : null,
+    homeScore90: home,
+    awayScore90: away,
   }
 }
 

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { hasResult } from '@/lib/wc2026-scoring'
 
 interface Standing {
   id: string
@@ -162,18 +163,19 @@ export default function Wc2026Page() {
   const nextOpenFixture = fixtures.find((f) => !f.locked)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">WC2026 Predictor</h1>
-              <p className="text-gray-600 mt-2">
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">WC2026 Predictor</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-2">
                 Predict full-time scores for every World Cup match. Max 3 points per fixture.
               </p>
               {lastUpdated && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Fixtures last updated: {new Date(lastUpdated).toLocaleString('en-GB', { timeZone: 'Europe/London' })} BST
+                <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
+                  Fixtures last updated:{' '}
+                  {new Date(lastUpdated).toLocaleString('en-GB', { timeZone: 'Europe/London' })} BST
                 </p>
               )}
               {myStanding && (
@@ -182,58 +184,69 @@ export default function Wc2026Page() {
                 </p>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col gap-2 w-full lg:w-auto lg:shrink-0">
               {nextOpenFixture && (
-                <Button onClick={scrollToNextFixture}>
-                  Next fixture — {nextOpenFixture.homeTeam} vs {nextOpenFixture.awayTeam}
+                <Button
+                  onClick={scrollToNextFixture}
+                  className="w-full lg:w-auto h-auto py-2.5 whitespace-normal text-left sm:text-center"
+                >
+                  <span className="block font-semibold">Next fixture</span>
+                  <span className="block text-sm font-normal opacity-90 mt-0.5">
+                    {nextOpenFixture.homeTeam} vs {nextOpenFixture.awayTeam}
+                  </span>
                 </Button>
               )}
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="w-full lg:w-auto">
                 <Link href="/dashboard">← Back to Dashboard</Link>
               </Button>
             </div>
           </div>
         </div>
 
-        <Card className="mb-8">
-          <CardHeader>
+        <Card className="mb-6 sm:mb-8">
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle>WC2026 Standings</CardTitle>
             <CardDescription>
               Separate ranking from the main league — 3 pts exact score, 1 pt correct outcome
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             {standings.length === 0 ? (
               <p className="text-sm text-gray-600">No standings yet.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Pos</TableHead>
-                    <TableHead>Manager</TableHead>
-                    <TableHead>Predictions</TableHead>
-                    <TableHead>Points</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {standings.map((manager, index) => (
-                    <TableRow key={manager.id}>
-                      <TableCell className="font-medium">{index + 1}</TableCell>
-                      <TableCell>{manager.username}</TableCell>
-                      <TableCell>{manager.predictionsMade}</TableCell>
-                      <TableCell>
-                        <span className="text-lg font-bold text-blue-600">{manager.totalPoints}</span>
-                      </TableCell>
+              <div className="overflow-x-auto -mx-4 sm:-mx-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Pos</TableHead>
+                      <TableHead>Manager</TableHead>
+                      <TableHead className="whitespace-nowrap">
+                        <span className="sm:hidden">Pred</span>
+                        <span className="hidden sm:inline">Predictions</span>
+                      </TableHead>
+                      <TableHead className="text-right">Points</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {standings.map((manager, index) => (
+                      <TableRow key={manager.id}>
+                        <TableCell className="font-medium">{index + 1}</TableCell>
+                        <TableCell className="max-w-[8rem] sm:max-w-none truncate">{manager.username}</TableCell>
+                        <TableCell>{manager.predictionsMade}</TableCell>
+                        <TableCell className="text-right">
+                          <span className="text-base sm:text-lg font-bold text-blue-600">{manager.totalPoints}</span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle>Fixtures</CardTitle>
             <CardDescription>
               Kickoff times shown in BST. Predictions lock at kickoff.
@@ -241,7 +254,7 @@ export default function Wc2026Page() {
               Result after 90 minutes
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             {fixtures.length === 0 ? (
               <p className="text-sm text-gray-600">
                 No fixtures loaded yet. Ask admin to run a WC2026 data sync.
@@ -251,6 +264,7 @@ export default function Wc2026Page() {
                 {fixtures.map((fixture) => {
                   const draft = draftScores[fixture.id] ?? { home: '', away: '' }
                   const canEdit = !fixture.locked && !fixture.finished
+                  const resultKnown = hasResult(fixture.homeScore90, fixture.awayScore90)
 
                   return (
                     <div
@@ -258,8 +272,8 @@ export default function Wc2026Page() {
                       key={fixture.id}
                       className={`${getFixturePanelClass(fixture)} scroll-mt-24`}
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
                           <Badge variant="outline">{fixture.stageLabel}</Badge>
                           {fixture.finished ? (
                             <Badge variant="secondary">Finished</Badge>
@@ -275,38 +289,48 @@ export default function Wc2026Page() {
                           )}
                         </div>
                         <p className="text-sm text-gray-500">{fixture.kickoffBst} BST</p>
-                        <div className="flex items-center gap-3 mt-2">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-sm sm:text-base">
                           {fixture.homeCrest && (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={fixture.homeCrest} alt="" className="h-6 w-6 object-contain" />
+                            <img src={fixture.homeCrest} alt="" className="h-5 w-5 sm:h-6 sm:w-6 object-contain shrink-0" />
                           )}
                           <span className="font-medium">{fixture.homeTeam}</span>
-                          <span className="text-gray-400">vs</span>
+                          {resultKnown ? (
+                            <>
+                              <span className="font-bold text-lg tabular-nums text-gray-900">
+                                {fixture.homeScore90}
+                              </span>
+                              <span className="text-gray-400 shrink-0">–</span>
+                              <span className="font-bold text-lg tabular-nums text-gray-900">
+                                {fixture.awayScore90}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-gray-400 shrink-0">vs</span>
+                          )}
                           <span className="font-medium">{fixture.awayTeam}</span>
                           {fixture.awayCrest && (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={fixture.awayCrest} alt="" className="h-6 w-6 object-contain" />
+                            <img src={fixture.awayCrest} alt="" className="h-5 w-5 sm:h-6 sm:w-6 object-contain shrink-0" />
                           )}
                         </div>
-                        {fixture.finished && fixture.homeScore90 !== null && fixture.awayScore90 !== null && (
-                          <p className="text-sm text-gray-700 mt-1">
-                            Result (90 min): {fixture.homeTeam} {fixture.homeScore90} – {fixture.awayScore90} {fixture.awayTeam}
-                          </p>
+                        {resultKnown && (
+                          <p className="text-xs text-gray-500 mt-1">Result after 90 minutes</p>
                         )}
                         {fixture.prediction && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            Your prediction: {fixture.homeTeam} {fixture.prediction.homeScore} – {fixture.prediction.awayScore} {fixture.awayTeam}
+                          <p className="text-sm text-gray-600 mt-1 break-words">
+                            Your prediction: {fixture.prediction.homeScore} – {fixture.prediction.awayScore}
                           </p>
                         )}
                       </div>
 
                       {canEdit ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-gray-100">
                           <Input
                             type="number"
                             min={0}
                             max={20}
-                            className="w-16 text-center"
+                            className="w-14 sm:w-16 text-center"
                             placeholder="H"
                             value={draft.home}
                             onChange={(e) =>
@@ -316,12 +340,12 @@ export default function Wc2026Page() {
                               }))
                             }
                           />
-                          <span className="text-gray-400">–</span>
+                          <span className="text-gray-400 shrink-0">–</span>
                           <Input
                             type="number"
                             min={0}
                             max={20}
-                            className="w-16 text-center"
+                            className="w-14 sm:w-16 text-center"
                             placeholder="A"
                             value={draft.away}
                             onChange={(e) =>
@@ -333,6 +357,7 @@ export default function Wc2026Page() {
                           />
                           <Button
                             size="sm"
+                            className="ml-auto shrink-0"
                             onClick={() => savePrediction(fixture.id)}
                             disabled={savingId === fixture.id}
                           >
