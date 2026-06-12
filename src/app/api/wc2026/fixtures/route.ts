@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { scorePrediction, formatKickoffBst, formatStageLabel, isFixtureLocked, hasResult } from '@/lib/wc2026-scoring'
+import {
+  computeFixturePoints,
+  formatKickoffBst,
+  formatStageLabel,
+  hasResult,
+  isFixtureInProgress,
+  isFixtureLocked,
+} from '@/lib/wc2026-scoring'
 
 export async function GET() {
   try {
@@ -25,14 +32,9 @@ export async function GET() {
       const prediction = predictionByFixture.get(f.id)
       const locked = isFixtureLocked(f.kickoffUtc, now)
       const finished = hasResult(f.homeScore90, f.awayScore90)
-      let points: number | null = null
-
-      if (prediction && finished && f.homeScore90 !== null && f.awayScore90 !== null) {
-        points = scorePrediction(
-          { home: prediction.homeScore, away: prediction.awayScore },
-          { home: f.homeScore90, away: f.awayScore90 }
-        )
-      }
+      const inProgress = isFixtureInProgress(f, now)
+      const points = computeFixturePoints(prediction, f, now)
+      const missed = locked && !prediction
 
       return {
         id: f.id,
@@ -45,12 +47,14 @@ export async function GET() {
         stageLabel: formatStageLabel(f.stage, f.groupName),
         status: f.status,
         locked,
+        inProgress,
         finished,
         homeScore90: f.homeScore90,
         awayScore90: f.awayScore90,
         prediction: prediction
           ? { homeScore: prediction.homeScore, awayScore: prediction.awayScore }
           : null,
+        missed,
         points,
       }
     })

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { scorePrediction, hasResult } from '@/lib/wc2026-scoring'
+import { computeManagerPoints, hasResult } from '@/lib/wc2026-scoring'
 
 export async function GET() {
   try {
@@ -30,16 +30,7 @@ export async function GET() {
     const standings = managers
       .map((manager) => {
         const managerPredictions = predictionsByManager.get(manager.id) ?? []
-        let totalPoints = 0
-
-        for (const pred of managerPredictions) {
-          const fixture = finishedFixtures.find((f) => f.id === pred.fixtureId)
-          if (!fixture || fixture.homeScore90 === null || fixture.awayScore90 === null) continue
-          totalPoints += scorePrediction(
-            { home: pred.homeScore, away: pred.awayScore },
-            { home: fixture.homeScore90, away: fixture.awayScore90 }
-          )
-        }
+        const totalPoints = computeManagerPoints(managerPredictions, finishedFixtures)
 
         return {
           id: manager.id,

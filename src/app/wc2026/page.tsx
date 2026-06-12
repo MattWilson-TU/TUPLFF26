@@ -29,10 +29,12 @@ interface Fixture {
   stageLabel: string
   status: string
   locked: boolean
+  inProgress: boolean
   finished: boolean
   homeScore90: number | null
   awayScore90: number | null
   prediction: { homeScore: number; awayScore: number } | null
+  missed: boolean
   points: number | null
 }
 
@@ -40,13 +42,11 @@ function getFixturePanelClass(fixture: Fixture): string {
   const base =
     'border rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between'
 
-  if (!fixture.finished || fixture.homeScore90 === null || fixture.awayScore90 === null) {
-    return `${base} bg-white`
-  }
-
   if (fixture.points === 3) return `${base} bg-green-100 border-green-200`
   if (fixture.points === 1) return `${base} bg-yellow-50 border-yellow-200`
-  return `${base} bg-gray-100 border-gray-200`
+  if (fixture.missed || fixture.points === 0) return `${base} bg-gray-100 border-gray-200`
+
+  return `${base} bg-white`
 }
 
 function getPointsBadgeClass(points: number): string {
@@ -265,18 +265,17 @@ export default function Wc2026Page() {
                   const draft = draftScores[fixture.id] ?? { home: '', away: '' }
                   const canEdit = !fixture.locked && !fixture.finished
                   const resultKnown = hasResult(fixture.homeScore90, fixture.awayScore90)
+                  const isClickable = fixture.locked
 
-                  return (
-                    <div
-                      id={`fixture-${fixture.id}`}
-                      key={fixture.id}
-                      className={`${getFixturePanelClass(fixture)} scroll-mt-24`}
-                    >
+                  const panelContent = (
+                    <>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <Badge variant="outline">{fixture.stageLabel}</Badge>
                           {fixture.finished ? (
                             <Badge variant="secondary">Finished</Badge>
+                          ) : fixture.inProgress ? (
+                            <Badge variant="destructive">In progress</Badge>
                           ) : fixture.locked ? (
                             <Badge variant="destructive">Locked</Badge>
                           ) : (
@@ -317,9 +316,19 @@ export default function Wc2026Page() {
                         {resultKnown && (
                           <p className="text-xs text-gray-500 mt-1">Result after 90 minutes</p>
                         )}
+                        {fixture.missed && (
+                          <p className="text-sm text-gray-600 mt-1">No prediction entered — 0 pts</p>
+                        )}
                         {fixture.prediction && (
                           <p className="text-sm text-gray-600 mt-1 break-words">
                             Your prediction: {fixture.prediction.homeScore} – {fixture.prediction.awayScore}
+                          </p>
+                        )}
+                        {isClickable && (
+                          <p className="text-sm text-blue-600 mt-2">
+                            {fixture.finished
+                              ? 'View all predictions & points →'
+                              : 'View all manager predictions →'}
                           </p>
                         )}
                       </div>
@@ -365,6 +374,25 @@ export default function Wc2026Page() {
                           </Button>
                         </div>
                       ) : null}
+                    </>
+                  )
+
+                  const panelClass = `${getFixturePanelClass(fixture)} scroll-mt-24${
+                    isClickable ? ' hover:shadow-md transition-shadow cursor-pointer' : ''
+                  }`
+
+                  return isClickable ? (
+                    <Link
+                      id={`fixture-${fixture.id}`}
+                      key={fixture.id}
+                      href={`/wc2026/fixtures/${fixture.id}`}
+                      className={`${panelClass} block no-underline text-inherit`}
+                    >
+                      {panelContent}
+                    </Link>
+                  ) : (
+                    <div id={`fixture-${fixture.id}`} key={fixture.id} className={panelClass}>
+                      {panelContent}
                     </div>
                   )
                 })}
