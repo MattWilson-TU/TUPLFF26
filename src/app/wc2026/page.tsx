@@ -325,7 +325,7 @@ export default function Wc2026Page() {
                           </p>
                         )}
                         {isClickable && (
-                          <p className="text-sm text-blue-600 mt-2">
+                          <p className="text-sm text-blue-600 mt-2 hidden md:block">
                             {fixture.finished
                               ? 'View all predictions & points →'
                               : 'View all manager predictions →'}
@@ -377,21 +377,36 @@ export default function Wc2026Page() {
                     </>
                   )
 
-                  const panelClass = `${getFixturePanelClass(fixture)} scroll-mt-24${
-                    isClickable ? ' hover:shadow-md transition-shadow cursor-pointer' : ''
-                  }`
+                  const panelClass = getFixturePanelClass(fixture)
+                  const fixtureHref = `/wc2026/fixtures/${fixture.id}`
 
-                  return isClickable ? (
-                    <Link
-                      id={`fixture-${fixture.id}`}
-                      key={fixture.id}
-                      href={`/wc2026/fixtures/${fixture.id}`}
-                      className={`${panelClass} block no-underline text-inherit`}
-                    >
-                      {panelContent}
-                    </Link>
-                  ) : (
-                    <div id={`fixture-${fixture.id}`} key={fixture.id} className={panelClass}>
+                  if (isClickable) {
+                    return (
+                      <div id={`fixture-${fixture.id}`} key={fixture.id} className="scroll-mt-24">
+                        <button
+                          type="button"
+                          onClick={() => router.push(fixtureHref)}
+                          aria-label={
+                            fixture.finished
+                              ? `View all predictions and points for ${fixture.homeTeam} vs ${fixture.awayTeam}`
+                              : `View all manager predictions for ${fixture.homeTeam} vs ${fixture.awayTeam}`
+                          }
+                          className={`${panelClass} md:hidden w-full text-left touch-manipulation active:opacity-90 transition-opacity`}
+                        >
+                          {panelContent}
+                        </button>
+                        <Link
+                          href={fixtureHref}
+                          className={`${panelClass} hidden md:flex no-underline text-inherit hover:shadow-md transition-shadow cursor-pointer`}
+                        >
+                          {panelContent}
+                        </Link>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div id={`fixture-${fixture.id}`} key={fixture.id} className={`${panelClass} scroll-mt-24`}>
                       {panelContent}
                     </div>
                   )
