@@ -9,13 +9,14 @@ datasource db {
 }
 
 model Manager {
-  id           String       @id @default(cuid())
-  name         String
-  passwordHash String
-  budgetKGBP   Int
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  username     String       @unique
+  id             String       @id @default(cuid())
+  name           String
+  passwordHash   String
+  budgetKGBP     Int
+  wc2026Enabled  Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  username       String       @unique
   accounts     Account[]
   wonLots      AuctionLot[]
   bids         Bid[]

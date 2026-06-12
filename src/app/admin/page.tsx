@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-type User = { id: string; username: string; name: string; budgetKGBP: number }
+type User = { id: string; username: string; name: string; budgetKGBP: number; wc2026Enabled: boolean }
 
 export default function AdminPage() {
   const { data: session, status } = useSession()
@@ -52,16 +52,20 @@ export default function AdminPage() {
     }
   }
 
-  async function updateUser(id: string, partial: Partial<User & { password: string }>) {
+  async function updateUser(id: string, partial: Partial<User & { password: string }>, keepEditing = false) {
     const res = await fetch('/api/admin/users', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...partial }),
     })
     if (res.ok) {
-      setEditingId(null)
+      if (!keepEditing) setEditingId(null)
       fetchUsers()
     }
+  }
+
+  async function toggleWc2026Enabled(user: User) {
+    await updateUser(user.id, { wc2026Enabled: !user.wc2026Enabled }, true)
   }
 
   async function deleteUser(id: string) {
@@ -437,6 +441,7 @@ export default function AdminPage() {
                   <TableHead>Username</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Budget (£m)</TableHead>
+                  <TableHead>WC2026</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -462,6 +467,23 @@ export default function AdminPage() {
                         <Input type="number" defaultValue={u.budgetKGBP} onBlur={e => updateUser(u.id, { budgetKGBP: Number(e.target.value) })} />
                       ) : (
                         `£${(u.budgetKGBP / 1000).toFixed(1)}m`
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {u.username === 'Admin01' ? (
+                        <span className="text-sm text-gray-400">N/A</span>
+                      ) : (
+                        <label className="inline-flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={u.wc2026Enabled}
+                            onChange={() => toggleWc2026Enabled(u)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">
+                            {u.wc2026Enabled ? 'In game' : 'Removed'}
+                          </span>
+                        </label>
                       )}
                     </TableCell>
                     <TableCell className="space-x-2">

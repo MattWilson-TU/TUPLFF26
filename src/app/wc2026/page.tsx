@@ -62,6 +62,7 @@ export default function Wc2026Page() {
   const [fixtures, setFixtures] = useState<Fixture[]>([])
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [enrolled, setEnrolled] = useState(true)
   const [draftScores, setDraftScores] = useState<Record<string, { home: string; away: string }>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
 
@@ -73,6 +74,16 @@ export default function Wc2026Page() {
 
   const loadData = useCallback(async () => {
     try {
+      const participationRes = await fetch('/api/wc2026/participation')
+      if (participationRes.ok) {
+        const participation = await participationRes.json()
+        if (!participation.enabled) {
+          setEnrolled(false)
+          router.push('/dashboard')
+          return
+        }
+      }
+
       const [standingsRes, fixturesRes, updatedRes] = await Promise.all([
         fetch('/api/wc2026/standings'),
         fetch('/api/wc2026/fixtures'),
@@ -101,7 +112,7 @@ export default function Wc2026Page() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
     if (session) loadData()
@@ -157,7 +168,7 @@ export default function Wc2026Page() {
     )
   }
 
-  if (!session) return null
+  if (!session || !enrolled) return null
 
   const myStanding = standings.find((s) => s.username === session.user?.username)
   const nextOpenFixture = fixtures.find((f) => !f.locked)

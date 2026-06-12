@@ -23,6 +23,7 @@ export default function DashboardPage() {
     predictionsMade: number
   } | null>(null)
   const [wc2026LastUpdated, setWc2026LastUpdated] = useState<string | null>(null)
+  const [wc2026Enrolled, setWc2026Enrolled] = useState(true)
   const [auctionStatus, setAuctionStatus] = useState<'OPEN' | 'CLOSED' | null>(null)
   const [myPlayers, setMyPlayers] = useState<Array<{
     id: number
@@ -120,10 +121,15 @@ export default function DashboardPage() {
     async function loadWc2026Summary() {
       if (!session?.user?.id) return
       try {
-        const [standingsRes, updatedRes] = await Promise.all([
+        const [participationRes, standingsRes, updatedRes] = await Promise.all([
+          fetch('/api/wc2026/participation'),
           fetch('/api/wc2026/standings'),
           fetch('/api/wc2026/last-updated'),
         ])
+        if (participationRes.ok) {
+          const participation = await participationRes.json()
+          setWc2026Enrolled(participation.enabled === true)
+        }
         if (standingsRes.ok) {
           const standings: Array<{
             id: string
@@ -259,6 +265,7 @@ export default function DashboardPage() {
         </div>
 
         {/* WC2026 summary at the top */}
+        {wc2026Enrolled && (
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">WC2026 Predictor</h2>
@@ -290,6 +297,7 @@ export default function DashboardPage() {
             </p>
           )}
         </div>
+        )}
 
         {/* Auction Summary - Show when auction is closed */}
         {auctionStatus === 'CLOSED' && myPlayers.length > 0 && (
@@ -334,6 +342,7 @@ export default function DashboardPage() {
         )}
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {wc2026Enrolled && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -353,6 +362,7 @@ export default function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
+          )}
 
           <Card>
             <CardHeader>

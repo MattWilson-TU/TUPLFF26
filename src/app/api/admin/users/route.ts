@@ -10,6 +10,7 @@ const userSchema = z.object({
   name: z.string().min(2),
   password: z.string().min(6).optional(),
   budgetKGBP: z.number().int().min(0).optional(),
+  wc2026Enabled: z.boolean().optional(),
 })
 
 async function ensureAdmin() {
@@ -25,7 +26,14 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const users = await prisma.manager.findMany({
-    select: { id: true, username: true, name: true, budgetKGBP: true, createdAt: true },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      budgetKGBP: true,
+      wc2026Enabled: true,
+      createdAt: true,
+    },
     orderBy: { createdAt: 'desc' },
   })
   return NextResponse.json(users)
@@ -46,7 +54,7 @@ export async function POST(request: NextRequest) {
       passwordHash: passwordHash ?? await bcrypt.hash('changeme', 12),
       budgetKGBP: parsed.budgetKGBP ?? 150000,
     },
-    select: { id: true, username: true, name: true, budgetKGBP: true },
+    select: { id: true, username: true, name: true, budgetKGBP: true, wc2026Enabled: true },
   })
   return NextResponse.json(created)
 }
@@ -62,12 +70,13 @@ export async function PUT(request: NextRequest) {
   if (parsed.username) updateData.username = parsed.username
   if (parsed.name) updateData.name = parsed.name
   if (parsed.budgetKGBP !== undefined) updateData.budgetKGBP = parsed.budgetKGBP
+  if (parsed.wc2026Enabled !== undefined) updateData.wc2026Enabled = parsed.wc2026Enabled
   if (parsed.password) updateData.passwordHash = await bcrypt.hash(parsed.password, 12)
 
   const updated = await prisma.manager.update({
     where: { id: parsed.id! },
     data: updateData,
-    select: { id: true, username: true, name: true, budgetKGBP: true },
+    select: { id: true, username: true, name: true, budgetKGBP: true, wc2026Enabled: true },
   })
   return NextResponse.json(updated)
 }

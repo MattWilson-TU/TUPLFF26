@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { computeManagerPoints, hasResult } from '@/lib/wc2026-scoring'
+import { wc2026ParticipantWhere } from '@/lib/wc2026-participants'
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
     }
 
     const managers = await prisma.manager.findMany({
-      where: { username: { not: 'Admin01' } },
+      where: wc2026ParticipantWhere,
       select: { id: true, name: true, username: true },
     })
 

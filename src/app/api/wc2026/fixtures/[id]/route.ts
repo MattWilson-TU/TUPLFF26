@@ -9,6 +9,7 @@ import {
   hasResult,
   isFixtureLocked,
 } from '@/lib/wc2026-scoring'
+import { wc2026ParticipantWhere } from '@/lib/wc2026-participants'
 
 export async function GET(
   _request: Request,
@@ -38,7 +39,7 @@ export async function GET(
     const finished = hasResult(fixture.homeScore90, fixture.awayScore90)
 
     const managers = await prisma.manager.findMany({
-      where: { username: { not: 'Admin01' } },
+      where: wc2026ParticipantWhere,
       select: { id: true, name: true, username: true },
       orderBy: { username: 'asc' },
     })

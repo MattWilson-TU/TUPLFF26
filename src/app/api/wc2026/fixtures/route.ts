@@ -10,12 +10,21 @@ import {
   isFixtureInProgress,
   isFixtureLocked,
 } from '@/lib/wc2026-scoring'
+import { isWc2026Participant, wc2026ParticipantWhere } from '@/lib/wc2026-participants'
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const manager = await prisma.manager.findUnique({
+      where: { id: session.user.id },
+      select: { wc2026Enabled: true, username: true },
+    })
+    if (!manager || !isWc2026Participant(manager)) {
+      return NextResponse.json({ error: 'You are not enrolled in the WC2026 predictor' }, { status: 403 })
     }
 
     const fixtures = await prisma.wcFixture.findMany({

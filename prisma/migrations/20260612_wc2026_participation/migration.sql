@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Manager" ADD COLUMN "wc2026Enabled" BOOLEAN NOT NULL DEFAULT true;
