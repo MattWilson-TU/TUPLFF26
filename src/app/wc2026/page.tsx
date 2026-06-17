@@ -198,6 +198,9 @@ export default function Wc2026Page() {
             </div>
             <div className="flex flex-col gap-2 w-full lg:w-auto lg:shrink-0">
               <Button asChild variant="outline" className="w-full lg:w-auto">
+                <Link href="/wc2026/matrix">Points matrix →</Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full lg:w-auto">
                 <Link href="/wc2026/knockout">Round of 32 projection →</Link>
               </Button>
               {nextOpenFixture && (
@@ -243,7 +246,14 @@ export default function Wc2026Page() {
                     {standings.map((manager, index) => (
                       <TableRow key={manager.id}>
                         <TableCell className="font-medium">{index + 1}</TableCell>
-                        <TableCell className="max-w-[8rem] sm:max-w-none truncate">{manager.username}</TableCell>
+                        <TableCell className="max-w-[8rem] sm:max-w-none truncate">
+                          <Link
+                            href={`/wc2026/managers/${manager.id}`}
+                            className="text-blue-600 hover:underline font-medium"
+                          >
+                            {manager.username}
+                          </Link>
+                        </TableCell>
                         <TableCell className="text-right">{manager.exactScores}</TableCell>
                         <TableCell className="text-right">
                           <span className="text-base sm:text-lg font-bold text-blue-600">{manager.totalPoints}</span>
