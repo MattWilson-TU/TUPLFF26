@@ -9,7 +9,8 @@
     "lint": "eslint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
+    "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
+    "test:wc2026-knockout": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' src/lib/wc2026-knockout.test.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
