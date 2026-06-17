@@ -62,6 +62,27 @@ export function computeManagerPoints(
   return totalPoints
 }
 
+export function computeManagerExactScores(
+  predictions: Array<{ fixtureId: string; homeScore: number; awayScore: number }>,
+  finishedFixtures: Array<{
+    id: string
+    kickoffUtc: Date
+    homeScore90: number | null
+    awayScore90: number | null
+  }>,
+  now = new Date()
+): number {
+  const predictionByFixture = new Map(predictions.map((p) => [p.fixtureId, p]))
+  let exactScores = 0
+
+  for (const fixture of finishedFixtures) {
+    const points = computeFixturePoints(predictionByFixture.get(fixture.id), fixture, now)
+    if (points === 3) exactScores++
+  }
+
+  return exactScores
+}
+
 export function formatKickoffBst(utcDate: Date | string): string {
   const d = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
   return new Intl.DateTimeFormat('en-GB', {

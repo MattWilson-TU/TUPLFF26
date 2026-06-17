@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { computeManagerPoints, hasResult } from '@/lib/wc2026-scoring'
+import { computeManagerExactScores, computeManagerPoints, hasResult } from '@/lib/wc2026-scoring'
 import { wc2026ParticipantWhere } from '@/lib/wc2026-participants'
 
 export async function GET() {
@@ -32,16 +32,17 @@ export async function GET() {
       .map((manager) => {
         const managerPredictions = predictionsByManager.get(manager.id) ?? []
         const totalPoints = computeManagerPoints(managerPredictions, finishedFixtures)
+        const exactScores = computeManagerExactScores(managerPredictions, finishedFixtures)
 
         return {
           id: manager.id,
           name: manager.name,
           username: manager.username,
           totalPoints,
-          predictionsMade: managerPredictions.length,
+          exactScores,
         }
       })
-      .sort((a, b) => b.totalPoints - a.totalPoints || b.predictionsMade - a.predictionsMade)
+      .sort((a, b) => b.totalPoints - a.totalPoints || b.exactScores - a.exactScores)
 
     return NextResponse.json(standings)
   } catch (error) {

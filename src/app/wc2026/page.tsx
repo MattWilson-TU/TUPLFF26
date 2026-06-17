@@ -16,7 +16,7 @@ interface Standing {
   name: string
   username: string
   totalPoints: number
-  predictionsMade: number
+  exactScores: number
 }
 
 interface Fixture {
@@ -191,7 +191,8 @@ export default function Wc2026Page() {
               )}
               {myStanding && (
                 <p className="text-sm text-blue-700 mt-1">
-                  Your score: {myStanding.totalPoints} pts ({myStanding.predictionsMade} predictions)
+                  Your score: {myStanding.totalPoints} pts
+                  {myStanding.exactScores > 0 && ` (${myStanding.exactScores} exact)`}
                 </p>
               )}
             </div>
@@ -221,7 +222,7 @@ export default function Wc2026Page() {
           <CardHeader className="px-4 sm:px-6">
             <CardTitle>WC2026 Standings</CardTitle>
             <CardDescription>
-              Separate ranking from the main league — 3 pts exact score, 1 pt correct outcome
+              Ranked by points, then exact scores (3 pts). 1 pt for correct outcome.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
@@ -234,10 +235,7 @@ export default function Wc2026Page() {
                     <TableRow>
                       <TableHead className="w-12">Pos</TableHead>
                       <TableHead>Manager</TableHead>
-                      <TableHead className="whitespace-nowrap">
-                        <span className="sm:hidden">Pred</span>
-                        <span className="hidden sm:inline">Predictions</span>
-                      </TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Exact</TableHead>
                       <TableHead className="text-right">Points</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -246,7 +244,7 @@ export default function Wc2026Page() {
                       <TableRow key={manager.id}>
                         <TableCell className="font-medium">{index + 1}</TableCell>
                         <TableCell className="max-w-[8rem] sm:max-w-none truncate">{manager.username}</TableCell>
-                        <TableCell>{manager.predictionsMade}</TableCell>
+                        <TableCell className="text-right">{manager.exactScores}</TableCell>
                         <TableCell className="text-right">
                           <span className="text-base sm:text-lg font-bold text-blue-600">{manager.totalPoints}</span>
                         </TableCell>

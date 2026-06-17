@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const [wc2026Summary, setWc2026Summary] = useState<{
     position: number | null
     totalPoints: number
-    predictionsMade: number
+    exactScores: number
   } | null>(null)
   const [wc2026LastUpdated, setWc2026LastUpdated] = useState<string | null>(null)
   const [wc2026Enrolled, setWc2026Enrolled] = useState(true)
@@ -134,20 +134,20 @@ export default function DashboardPage() {
           const standings: Array<{
             id: string
             totalPoints: number
-            predictionsMade: number
+            exactScores: number
           }> = await standingsRes.json()
           const idx = standings.findIndex((s) => s.id === session.user.id)
           if (idx >= 0) {
             setWc2026Summary({
               position: idx + 1,
               totalPoints: standings[idx].totalPoints,
-              predictionsMade: standings[idx].predictionsMade,
+              exactScores: standings[idx].exactScores,
             })
           } else {
             setWc2026Summary({
               position: null,
               totalPoints: 0,
-              predictionsMade: 0,
+              exactScores: 0,
             })
           }
         }
@@ -283,8 +283,8 @@ export default function DashboardPage() {
               <p className="text-2xl font-bold text-purple-600">{wc2026Summary?.totalPoints ?? 0}</p>
             </div>
             <div className="text-center">
-              <p className="text-sm text-gray-600">Predictions made</p>
-              <p className="text-2xl font-bold text-green-600">{wc2026Summary?.predictionsMade ?? 0}</p>
+              <p className="text-sm text-gray-600">Exact scores</p>
+              <p className="text-2xl font-bold text-green-600">{wc2026Summary?.exactScores ?? 0}</p>
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
