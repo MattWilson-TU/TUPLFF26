@@ -9,7 +9,6 @@ import {
   formatKickoffBst,
   hasResult,
 } from '@/lib/wc2026-scoring'
-import { fixtureFlags } from '@/lib/wc2026-team-flags'
 import { isWc2026Participant, wc2026ParticipantWhere } from '@/lib/wc2026-participants'
 
 export async function GET() {
@@ -61,9 +60,11 @@ export async function GET() {
       id: fixture.id,
       homeTeam: fixture.homeTeam,
       awayTeam: fixture.awayTeam,
-      flags: fixtureFlags(fixture.homeTeam, fixture.awayTeam),
+      homeCrest: fixture.homeCrest,
+      awayCrest: fixture.awayCrest,
+      homeScore90: fixture.homeScore90,
+      awayScore90: fixture.awayScore90,
       kickoffBst: formatKickoffBst(fixture.kickoffUtc),
-      realScore: `${fixture.homeScore90}-${fixture.awayScore90}`,
     }))
 
     const cells: Record<string, Record<string, number>> = {}

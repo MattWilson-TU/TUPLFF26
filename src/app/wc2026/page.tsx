@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { WcFixtureLine } from '@/components/wc2026-fixture-line'
 import { hasResult } from '@/lib/wc2026-scoring'
 
 interface Standing {
@@ -310,30 +311,15 @@ export default function Wc2026Page() {
                           )}
                         </div>
                         <p className="text-sm text-gray-500">{fixture.kickoffBst} BST</p>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-sm sm:text-base">
-                          {fixture.homeCrest && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={fixture.homeCrest} alt="" className="h-5 w-5 sm:h-6 sm:w-6 object-contain shrink-0" />
-                          )}
-                          <span className="font-medium">{fixture.homeTeam}</span>
-                          {resultKnown ? (
-                            <>
-                              <span className="font-bold text-lg tabular-nums text-gray-900">
-                                {fixture.homeScore90}
-                              </span>
-                              <span className="text-gray-400 shrink-0">–</span>
-                              <span className="font-bold text-lg tabular-nums text-gray-900">
-                                {fixture.awayScore90}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-gray-400 shrink-0">vs</span>
-                          )}
-                          <span className="font-medium">{fixture.awayTeam}</span>
-                          {fixture.awayCrest && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={fixture.awayCrest} alt="" className="h-5 w-5 sm:h-6 sm:w-6 object-contain shrink-0" />
-                          )}
+                        <div className="mt-2">
+                          <WcFixtureLine
+                            homeTeam={fixture.homeTeam}
+                            awayTeam={fixture.awayTeam}
+                            homeCrest={fixture.homeCrest}
+                            awayCrest={fixture.awayCrest}
+                            homeScore90={resultKnown ? fixture.homeScore90 : null}
+                            awayScore90={resultKnown ? fixture.awayScore90 : null}
+                          />
                         </div>
                         {resultKnown && (
                           <p className="text-xs text-gray-500 mt-1">Result after 90 minutes</p>

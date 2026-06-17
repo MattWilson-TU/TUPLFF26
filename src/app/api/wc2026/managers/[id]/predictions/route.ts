@@ -62,7 +62,8 @@ export async function GET(
         awayCrest: fixture.awayCrest,
         kickoffBst: formatKickoffBst(fixture.kickoffUtc),
         stageLabel: formatStageLabel(fixture.stage, fixture.groupName),
-        realScore: `${fixture.homeScore90}-${fixture.awayScore90}`,
+        homeScore90: fixture.homeScore90,
+        awayScore90: fixture.awayScore90,
         predictedScore: prediction
           ? `${prediction.homeScore}-${prediction.awayScore}`
           : null,

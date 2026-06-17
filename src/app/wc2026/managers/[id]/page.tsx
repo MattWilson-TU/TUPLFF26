@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { WcFixtureLine } from '@/components/wc2026-fixture-line'
 
 interface ManagerInfo {
   id: string
@@ -23,7 +24,8 @@ interface ResultRow {
   awayCrest: string | null
   kickoffBst: string
   stageLabel: string
-  realScore: string
+  homeScore90: number
+  awayScore90: number
   predictedScore: string | null
   missed: boolean
   points: number
@@ -134,9 +136,7 @@ export default function Wc2026ManagerPage({ params }: { params: Promise<{ id: st
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Home</TableHead>
-                      <TableHead>Away</TableHead>
-                      <TableHead className="text-center whitespace-nowrap">Real</TableHead>
+                      <TableHead>Fixture</TableHead>
                       <TableHead className="text-center whitespace-nowrap">Predicted</TableHead>
                       <TableHead className="text-right">Pts</TableHead>
                     </TableRow>
@@ -144,9 +144,16 @@ export default function Wc2026ManagerPage({ params }: { params: Promise<{ id: st
                   <TableBody>
                     {results.map((row) => (
                       <TableRow key={row.fixtureId} className={getRowClass(row.points, row.missed)}>
-                        <TableCell className="font-medium">{row.homeTeam}</TableCell>
-                        <TableCell className="font-medium">{row.awayTeam}</TableCell>
-                        <TableCell className="text-center">{row.realScore}</TableCell>
+                        <TableCell className="py-3">
+                          <WcFixtureLine
+                            homeTeam={row.homeTeam}
+                            awayTeam={row.awayTeam}
+                            homeCrest={row.homeCrest}
+                            awayCrest={row.awayCrest}
+                            homeScore90={row.homeScore90}
+                            awayScore90={row.awayScore90}
+                          />
+                        </TableCell>
                         <TableCell className="text-center">
                           {row.missed ? (
                             <span className="text-gray-500">Missed</span>

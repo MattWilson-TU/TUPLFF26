@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { WcFixtureLine } from '@/components/wc2026-fixture-line'
 
 interface MatrixManager {
   id: string
@@ -18,9 +19,11 @@ interface MatrixFixture {
   id: string
   homeTeam: string
   awayTeam: string
-  flags: string
+  homeCrest: string | null
+  awayCrest: string | null
+  homeScore90: number
+  awayScore90: number
   kickoffBst: string
-  realScore: string
 }
 
 interface MatrixData {
@@ -125,7 +128,7 @@ export default function Wc2026MatrixPage() {
                 <table className="border-collapse text-sm">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 top-0 z-30 bg-gray-100 border-b border-r border-gray-200 p-2 w-14 min-w-14 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]" />
+                      <th className="sticky left-0 top-0 z-30 bg-gray-100 border-b border-r border-gray-200 p-2 w-[5.5rem] min-w-[5.5rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]" />
                       {matrix.managers.map((manager) => (
                         <th
                           key={manager.id}
@@ -146,10 +149,18 @@ export default function Wc2026MatrixPage() {
                     {matrix.fixtures.map((fixture) => (
                       <tr key={fixture.id} className="group">
                         <td
-                          className="sticky left-0 z-10 bg-white border-r border-b border-gray-200 p-1 text-center text-lg leading-none w-14 min-w-14 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] group-hover:bg-gray-50"
-                          title={`${fixture.homeTeam} vs ${fixture.awayTeam} (${fixture.realScore})`}
+                          className="sticky left-0 z-10 bg-white border-r border-b border-gray-200 p-1 w-[5.5rem] min-w-[5.5rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] group-hover:bg-gray-50"
+                          title={`${fixture.homeTeam} vs ${fixture.awayTeam} (${fixture.homeScore90}–${fixture.awayScore90})`}
                         >
-                          {fixture.flags}
+                          <WcFixtureLine
+                            variant="compact"
+                            homeTeam={fixture.homeTeam}
+                            awayTeam={fixture.awayTeam}
+                            homeCrest={fixture.homeCrest}
+                            awayCrest={fixture.awayCrest}
+                            homeScore90={fixture.homeScore90}
+                            awayScore90={fixture.awayScore90}
+                          />
                         </td>
                         {matrix.managers.map((manager) => {
                           const points = matrix.cells[fixture.id]?.[manager.id] ?? 0
