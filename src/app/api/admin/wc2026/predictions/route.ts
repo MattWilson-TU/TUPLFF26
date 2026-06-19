@@ -3,12 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isFixtureLocked } from '@/lib/wc2026-scoring'
-import { isWc2026Participant } from '@/lib/wc2026-participants'
+import { isWc2026Admin, isWc2026Participant } from '@/lib/wc2026-participants'
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.username || session.user.username !== 'Admin01') {
+    if (!session?.user?.username || !isWc2026Admin(session.user.username)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

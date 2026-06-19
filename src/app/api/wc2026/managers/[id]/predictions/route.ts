@@ -10,7 +10,7 @@ import {
   formatStageLabel,
   hasResult,
 } from '@/lib/wc2026-scoring'
-import { isWc2026Participant, wc2026ParticipantWhere } from '@/lib/wc2026-participants'
+import { canAccessWc2026, wc2026ParticipantWhere } from '@/lib/wc2026-participants'
 
 export async function GET(
   _request: Request,
@@ -26,7 +26,7 @@ export async function GET(
       where: { id: session.user.id },
       select: { wc2026Enabled: true, username: true },
     })
-    if (!viewer || !isWc2026Participant(viewer)) {
+    if (!viewer || !canAccessWc2026(viewer)) {
       return NextResponse.json({ error: 'You are not enrolled in the WC2026 predictor' }, { status: 403 })
     }
 

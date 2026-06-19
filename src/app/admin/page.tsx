@@ -397,6 +397,9 @@ export default function AdminPage() {
                   <Link href="/auction-room">Go to Auction Room</Link>
                 </Button>
                 <Button asChild variant="outline">
+                  <Link href="/wc2026">WC2026 Predictor</Link>
+                </Button>
+                <Button asChild variant="outline">
                   <Link href="/admin/team-management">Team Management</Link>
                 </Button>
               </div>

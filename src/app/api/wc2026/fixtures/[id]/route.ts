@@ -9,7 +9,7 @@ import {
   hasResult,
   isFixtureLocked,
 } from '@/lib/wc2026-scoring'
-import { wc2026ParticipantWhere } from '@/lib/wc2026-participants'
+import { isWc2026Admin, wc2026ParticipantWhere } from '@/lib/wc2026-participants'
 
 export async function GET(
   _request: Request,
@@ -37,7 +37,7 @@ export async function GET(
     }
 
     const finished = hasResult(fixture.homeScore90, fixture.awayScore90)
-    const isAdmin = session.user.username === 'Admin01'
+    const isAdmin = isWc2026Admin(session.user.username ?? '')
 
     const managers = await prisma.manager.findMany({
       where: wc2026ParticipantWhere,

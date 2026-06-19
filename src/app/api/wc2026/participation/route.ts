@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { isWc2026Participant } from '@/lib/wc2026-participants'
+import { canAccessWc2026, isWc2026Admin } from '@/lib/wc2026-participants'
 
 export async function GET() {
   try {
@@ -20,7 +20,10 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ enabled: isWc2026Participant(manager) })
+    return NextResponse.json({
+      enabled: canAccessWc2026(manager),
+      isAdmin: isWc2026Admin(manager.username),
+    })
   } catch (error) {
     console.error('Error fetching WC2026 participation:', error)
     return NextResponse.json({ error: 'Failed to fetch participation status' }, { status: 500 })

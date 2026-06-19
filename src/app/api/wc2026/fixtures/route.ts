@@ -10,7 +10,7 @@ import {
   isFixtureInProgress,
   isFixtureLocked,
 } from '@/lib/wc2026-scoring'
-import { isWc2026Participant, wc2026ParticipantWhere } from '@/lib/wc2026-participants'
+import { canAccessWc2026 } from '@/lib/wc2026-participants'
 
 export async function GET() {
   try {
@@ -23,7 +23,7 @@ export async function GET() {
       where: { id: session.user.id },
       select: { wc2026Enabled: true, username: true },
     })
-    if (!manager || !isWc2026Participant(manager)) {
+    if (!manager || !canAccessWc2026(manager)) {
       return NextResponse.json({ error: 'You are not enrolled in the WC2026 predictor' }, { status: 403 })
     }
 

@@ -64,6 +64,7 @@ export default function Wc2026Page() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [enrolled, setEnrolled] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [draftScores, setDraftScores] = useState<Record<string, { home: string; away: string }>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
 
@@ -83,6 +84,7 @@ export default function Wc2026Page() {
           router.push('/dashboard')
           return
         }
+        setIsAdmin(participation.isAdmin === true)
       }
 
       const [standingsRes, fixturesRes, updatedRes] = await Promise.all([
@@ -190,10 +192,15 @@ export default function Wc2026Page() {
                   {new Date(lastUpdated).toLocaleString('en-GB', { timeZone: 'Europe/London' })} BST
                 </p>
               )}
-              {myStanding && (
+              {myStanding && !isAdmin && (
                 <p className="text-sm text-blue-700 mt-1">
                   Your score: {myStanding.totalPoints} pts
                   {myStanding.exactScores > 0 && ` (${myStanding.exactScores} exact)`}
+                </p>
+              )}
+              {isAdmin && (
+                <p className="text-sm text-blue-700 mt-1">
+                  Admin view — open a started fixture to enter predictions for managers who missed the deadline.
                 </p>
               )}
             </div>
@@ -286,7 +293,7 @@ export default function Wc2026Page() {
               <div className="space-y-4">
                 {fixtures.map((fixture) => {
                   const draft = draftScores[fixture.id] ?? { home: '', away: '' }
-                  const canEdit = !fixture.locked && !fixture.finished
+                  const canEdit = !isAdmin && !fixture.locked && !fixture.finished
                   const resultKnown = hasResult(fixture.homeScore90, fixture.awayScore90)
                   const isClickable = fixture.locked
 
