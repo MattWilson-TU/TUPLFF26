@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { hasResult } from '@/lib/wc2026-scoring'
 
 interface FixtureDetail {
@@ -31,6 +32,7 @@ interface ManagerRow {
   prediction: { homeScore: number; awayScore: number } | null
   missed: boolean
   points: number | null
+  adminEditable?: boolean
 }
 
 function getPointsBadgeClass(points: number): string {
@@ -46,7 +48,10 @@ export default function Wc2026FixturePage({ params }: { params: Promise<{ id: st
   const [fixture, setFixture] = useState<FixtureDetail | null>(null)
   const [managers, setManagers] = useState<ManagerRow[]>([])
   const [showPoints, setShowPoints] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [draftScores, setDraftScores] = useState<Record<string, { home: string; away: string }>>({})
+  const [savingId, setSavingId] = useState<string | null>(null)
 
   useEffect(() => {
     params.then((p) => setFixtureId(p.id))
@@ -74,6 +79,18 @@ export default function Wc2026FixturePage({ params }: { params: Promise<{ id: st
         setFixture(data.fixture)
         setManagers(data.managers)
         setShowPoints(data.showPoints)
+        setIsAdmin(data.isAdmin ?? false)
+
+        const drafts: Record<string, { home: string; away: string }> = {}
+        for (const m of data.managers as ManagerRow[]) {
+          if (m.adminEditable) {
+            drafts[m.id] = {
+              home: m.prediction ? String(m.prediction.homeScore) : '',
+              away: m.prediction ? String(m.prediction.awayScore) : '',
+            }
+          }
+        }
+        setDraftScores(drafts)
       } catch (error) {
         console.error('Error loading fixture:', error)
         router.push('/wc2026')
@@ -86,6 +103,57 @@ export default function Wc2026FixturePage({ params }: { params: Promise<{ id: st
       loadFixture()
     }
   }, [fixtureId, router, status])
+
+  async function reloadFixture() {
+    if (!fixtureId) return
+    const res = await fetch(`/api/wc2026/fixtures/${fixtureId}`)
+    if (!res.ok) return
+    const data = await res.json()
+    setFixture(data.fixture)
+    setManagers(data.managers)
+    setShowPoints(data.showPoints)
+    setIsAdmin(data.isAdmin ?? false)
+    const drafts: Record<string, { home: string; away: string }> = {}
+    for (const m of data.managers as ManagerRow[]) {
+      if (m.adminEditable) {
+        drafts[m.id] = {
+          home: m.prediction ? String(m.prediction.homeScore) : '',
+          away: m.prediction ? String(m.prediction.awayScore) : '',
+        }
+      }
+    }
+    setDraftScores(drafts)
+  }
+
+  async function saveAdminPrediction(managerId: string) {
+    const draft = draftScores[managerId]
+    if (!draft) return
+
+    const homeScore = parseInt(draft.home, 10)
+    const awayScore = parseInt(draft.away, 10)
+    if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+      alert('Enter valid scores for both teams')
+      return
+    }
+
+    setSavingId(managerId)
+    try {
+      const res = await fetch('/api/admin/wc2026/predictions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ managerId, fixtureId, homeScore, awayScore }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to save prediction')
+      }
+      await reloadFixture()
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed to save prediction')
+    } finally {
+      setSavingId(null)
+    }
+  }
 
   if (status === 'loading' || loading) {
     return (
@@ -157,6 +225,12 @@ export default function Wc2026FixturePage({ params }: { params: Promise<{ id: st
               {showPoints
                 ? 'Points awarded after the final result (3 pts exact score, 1 pt correct outcome)'
                 : 'All manager predictions for this fixture. Points will appear once the result is confirmed.'}
+              {isAdmin && (
+                <>
+                  <br />
+                  As admin, you can enter predictions for managers who missed the deadline.
+                </>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
@@ -174,7 +248,11 @@ export default function Wc2026FixturePage({ params }: { params: Promise<{ id: st
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {managers.map((manager, index) => (
+                    {managers.map((manager, index) => {
+                      const draft = draftScores[manager.id] ?? { home: '', away: '' }
+                      const canAdminEdit = isAdmin && manager.adminEditable
+
+                      return (
                       <TableRow key={manager.id}>
                         {showPoints && (
                           <TableCell className="font-medium">{index + 1}</TableCell>
@@ -183,7 +261,46 @@ export default function Wc2026FixturePage({ params }: { params: Promise<{ id: st
                           {manager.username}
                         </TableCell>
                         <TableCell>
-                          {manager.prediction ? (
+                          {canAdminEdit ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={20}
+                                className="w-14 text-center"
+                                placeholder="H"
+                                value={draft.home}
+                                onChange={(e) =>
+                                  setDraftScores((prev) => ({
+                                    ...prev,
+                                    [manager.id]: { ...draft, home: e.target.value },
+                                  }))
+                                }
+                              />
+                              <span className="text-gray-400 shrink-0">–</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={20}
+                                className="w-14 text-center"
+                                placeholder="A"
+                                value={draft.away}
+                                onChange={(e) =>
+                                  setDraftScores((prev) => ({
+                                    ...prev,
+                                    [manager.id]: { ...draft, away: e.target.value },
+                                  }))
+                                }
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => saveAdminPrediction(manager.id)}
+                                disabled={savingId === manager.id}
+                              >
+                                {savingId === manager.id ? 'Saving...' : 'Save'}
+                              </Button>
+                            </div>
+                          ) : manager.prediction ? (
                             <span className="tabular-nums">
                               {manager.prediction.homeScore} – {manager.prediction.awayScore}
                             </span>
@@ -199,7 +316,7 @@ export default function Wc2026FixturePage({ params }: { params: Promise<{ id: st
                           </TableCell>
                         )}
                       </TableRow>
-                    ))}
+                    )})}
                   </TableBody>
                 </Table>
               </div>

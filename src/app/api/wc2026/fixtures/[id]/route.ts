@@ -37,6 +37,7 @@ export async function GET(
     }
 
     const finished = hasResult(fixture.homeScore90, fixture.awayScore90)
+    const isAdmin = session.user.username === 'Admin01'
 
     const managers = await prisma.manager.findMany({
       where: wc2026ParticipantWhere,
@@ -52,6 +53,10 @@ export async function GET(
     const rows = managers.map((manager) => {
       const prediction = predictionByManager.get(manager.id)
       const points = computeFixturePoints(prediction, fixture, now)
+      const adminEditable =
+        isAdmin &&
+        (!prediction ||
+          (prediction.createdAt > fixture.kickoffUtc))
 
       return {
         id: manager.id,
@@ -62,6 +67,7 @@ export async function GET(
           : null,
         missed: !prediction,
         points: finished ? (points ?? 0) : null,
+        adminEditable,
       }
     })
 
@@ -89,6 +95,7 @@ export async function GET(
       },
       managers: rows,
       showPoints: finished,
+      isAdmin,
     })
   } catch (error) {
     console.error('Error fetching WC2026 fixture predictions:', error)
