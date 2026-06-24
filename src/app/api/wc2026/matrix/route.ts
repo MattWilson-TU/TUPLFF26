@@ -65,6 +65,7 @@ export async function GET() {
       homeScore90: fixture.homeScore90,
       awayScore90: fixture.awayScore90,
       kickoffBst: formatKickoffBst(fixture.kickoffUtc),
+      kickoffUtc: fixture.kickoffUtc.toISOString(),
     }))
 
     const cells: Record<string, Record<string, number>> = {}

@@ -206,7 +206,7 @@ export default function Wc2026Page() {
             </div>
             <div className="flex flex-col gap-2 w-full lg:w-auto lg:shrink-0">
               <Button asChild variant="outline" className="w-full lg:w-auto">
-                <Link href="/wc2026/matrix">Points matrix →</Link>
+                <Link href="/stats">Stats →</Link>
               </Button>
               <Button asChild variant="outline" className="w-full lg:w-auto">
                 <Link href="/wc2026/knockout">Round of 32 projection →</Link>

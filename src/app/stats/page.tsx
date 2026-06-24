@@ -2,376 +2,357 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { WcFixtureLine } from '@/components/wc2026-fixture-line'
 
-interface PlayerStats {
-  id: number
-  firstName: string
-  secondName: string
-  webName?: string
-  elementType: 'GK' | 'DEF' | 'MID' | 'FWD'
-  team: { name: string }
-  totalPoints: number
-  nowCostHalfM: number
-  currentOwner?: {
-    username: string
-  }
-}
-
-interface ManagerStats {
+interface MatrixManager {
+  id: string
   username: string
-  name: string
   totalPoints: number
-  gameweekPoints: Array<{
-    gameweekId: number
-    points: number
-    cumulativePoints: number
-  }>
+  exactScores: number
 }
 
-interface TopPlayers {
-  GK: PlayerStats[]
-  DEF: PlayerStats[]
-  MID: PlayerStats[]
-  FWD: PlayerStats[]
+interface MatrixFixture {
+  id: string
+  homeTeam: string
+  awayTeam: string
+  homeCrest: string | null
+  awayCrest: string | null
+  homeScore90: number
+  awayScore90: number
+  kickoffBst: string
+  kickoffUtc: string
+}
+
+interface MatrixData {
+  managers: MatrixManager[]
+  fixtures: MatrixFixture[]
+  cells: Record<string, Record<string, number>>
+}
+
+interface ChartDayPoint {
+  day: string
+  dayLabel: string
+  [username: string]: string | number
+}
+
+const managerLineColors = ['#2563eb', '#16a34a', '#ea580c']
+
+function pointCellClass(points: number): string {
+  if (points === 3) return 'bg-green-500'
+  if (points === 1) return 'bg-yellow-400'
+  return 'bg-gray-300'
+}
+
+function buildLosAngelesDay(utcIso: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(utcIso))
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '0000'
+  const month = parts.find((part) => part.type === 'month')?.value ?? '00'
+  const day = parts.find((part) => part.type === 'day')?.value ?? '00'
+
+  return `${year}-${month}-${day}`
+}
+
+function formatLosAngelesDay(day: string): string {
+  const [year, month, date] = day.split('-')
+  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(date))).toLocaleDateString('en-US', {
+    timeZone: 'America/Los_Angeles',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 export default function StatsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [topPlayers, setTopPlayers] = useState<TopPlayers>({ GK: [], DEF: [], MID: [], FWD: [] })
-  const [auctionStatus, setAuctionStatus] = useState<string>('')
-  const [managerStats, setManagerStats] = useState<ManagerStats[]>([])
+  const [matrix, setMatrix] = useState<MatrixData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [enrolled, setEnrolled] = useState(true)
   const [selectedManager1, setSelectedManager1] = useState<string>('')
   const [selectedManager2, setSelectedManager2] = useState<string>('')
   const [selectedManager3, setSelectedManager3] = useState<string>('')
-  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin')
-    }
+    if (status === 'unauthenticated') router.push('/auth/signin')
   }, [status, router])
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetchStats()
-    }
-  }, [status])
-
-  const fetchStats = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setIsLoading(true)
-      
-      // Fetch auction status
-      const auctionRes = await fetch('/api/auction/current')
-      if (auctionRes.ok) {
-        const auctionData = await auctionRes.json()
-        setAuctionStatus(auctionData.status || '')
-      }
-      
-      // Fetch top players by position
-      const playersRes = await fetch('/api/stats/top-players')
-      if (playersRes.ok) {
-        const playersData = await playersRes.json()
-        setTopPlayers(playersData)
+      const participationRes = await fetch('/api/wc2026/participation')
+      if (participationRes.ok) {
+        const participation = await participationRes.json()
+        if (!participation.enabled) {
+          setEnrolled(false)
+          router.push('/dashboard')
+          return
+        }
       }
 
-      // Fetch manager stats
-      const managersRes = await fetch('/api/stats/manager-performance')
-      if (managersRes.ok) {
-        const managersData = await managersRes.json()
-        setManagerStats(managersData)
+      const matrixRes = await fetch('/api/wc2026/matrix')
+      if (matrixRes.ok) {
+        const data: MatrixData = await matrixRes.json()
+        setMatrix(data)
+        setSelectedManager1(data.managers[0]?.username ?? '')
+        setSelectedManager2(data.managers[1]?.username ?? '')
+        setSelectedManager3(data.managers[2]?.username ?? '')
       }
     } catch (error) {
-      console.error('Error fetching stats:', error)
+      console.error('Error loading stats:', error)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [router])
 
-  const getPositionColor = (position: string) => {
-    switch (position) {
-      case 'GK': return 'bg-green-100 text-green-800'
-      case 'DEF': return 'bg-blue-100 text-blue-800'
-      case 'MID': return 'bg-yellow-100 text-yellow-800'
-      case 'FWD': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
+  useEffect(() => {
+    if (session) loadData()
+  }, [session, loadData])
 
-  const formatPrice = (halfMillionUnits: number) => {
-    return `£${(halfMillionUnits * 0.5).toFixed(1)}m`
-  }
-
-
-  // Get selected managers
-  const selectedManagers = [selectedManager1, selectedManager2, selectedManager3].filter(Boolean)
-  const filteredManagerStats = selectedManagers.length > 0
-    ? managerStats.filter(m => selectedManagers.includes(m.username))
-    : managerStats.slice(0, 3) // Default to first 3 managers if none selected
-
-  // Find the latest gameweek with points across all managers
-  const latestGameweekWithPoints = Math.max(
-    ...managerStats.flatMap(m => 
-      m.gameweekPoints
-        .filter(gw => gw.points > 0)
-        .map(gw => gw.gameweekId)
-    ),
-    0
+  const selectedManagerUsernames = useMemo(
+    () => [selectedManager1, selectedManager2, selectedManager3].filter(Boolean),
+    [selectedManager1, selectedManager2, selectedManager3]
   )
 
-  // Create chart data with each manager as a separate line
-  const chartData = []
-  const gameweeks = Array.from({ length: latestGameweekWithPoints }, (_, i) => i + 1)
-  
-  for (const gw of gameweeks) {
-    const dataPoint: any = { gameweek: `GW${gw}` }
-    
-    for (const manager of filteredManagerStats) {
-      const gwData = manager.gameweekPoints.find(gwData => gwData.gameweekId === gw)
-      dataPoint[manager.name] = gwData ? gwData.cumulativePoints : 0
+  const selectedManagers = useMemo(() => {
+    if (!matrix) return []
+    return selectedManagerUsernames
+      .map((username) => matrix.managers.find((manager) => manager.username === username))
+      .filter((manager): manager is MatrixManager => Boolean(manager))
+  }, [matrix, selectedManagerUsernames])
+
+  const chartData = useMemo<ChartDayPoint[]>(() => {
+    if (!matrix || selectedManagers.length === 0 || matrix.fixtures.length === 0) return []
+
+    const fixturesByDay = new Map<string, MatrixFixture[]>()
+    for (const fixture of matrix.fixtures) {
+      const day = buildLosAngelesDay(fixture.kickoffUtc)
+      const list = fixturesByDay.get(day) ?? []
+      list.push(fixture)
+      fixturesByDay.set(day, list)
     }
-    
-    chartData.push(dataPoint)
-  }
+
+    const days = Array.from(fixturesByDay.keys()).sort()
+    const cumulative = new Map<string, number>(selectedManagers.map((manager) => [manager.id, 0]))
+
+    return days.map((day) => {
+      const point: ChartDayPoint = { day, dayLabel: formatLosAngelesDay(day) }
+      const dayFixtures = fixturesByDay.get(day) ?? []
+
+      for (const manager of selectedManagers) {
+        const dayPoints = dayFixtures.reduce((sum, fixture) => {
+          return sum + (matrix.cells[fixture.id]?.[manager.id] ?? 0)
+        }, 0)
+        const nextTotal = (cumulative.get(manager.id) ?? 0) + dayPoints
+        cumulative.set(manager.id, nextTotal)
+        point[manager.username] = nextTotal
+      }
+
+      return point
+    })
+  }, [matrix, selectedManagers])
+
+  const managerChoices = matrix?.managers ?? []
 
   if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading statistics...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading stats...</p>
         </div>
       </div>
     )
   }
 
-  if (!session) {
-    return null
-  }
+  if (!session || !enrolled || !matrix) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Statistics</h1>
-              <p className="text-gray-600 mt-2">
-                Player performance and manager analytics
-              </p>
-            </div>
-            <Button asChild variant="outline">
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Stats</h1>
+            <p className="text-sm text-gray-600 mt-2">
+              Points matrix and cumulative points by day (America/Los_Angeles kickoff date).
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 w-full sm:w-auto">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href="/wc2026">← Back to Predictor</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/dashboard">← Back to Dashboard</Link>
             </Button>
           </div>
         </div>
 
-        {/* Top Players by Position */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-6">Top 5 Players by Position</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {(['GK', 'DEF', 'MID', 'FWD'] as const).map(position => (
-              <Card key={position}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Badge className={getPositionColor(position)}>
-                      {position}
-                    </Badge>
-                    <span className="text-lg">Top 5</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {topPlayers[position]?.slice(0, 5).map((player, index) => (
-                      <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">
-                            {player.webName || `${player.firstName} ${player.secondName}`}
-                          </p>
-                          <p className="text-xs text-gray-600">{player.team.name}</p>
-                          {player.currentOwner && (
-                            <p className="text-xs text-blue-600">Owned by {player.currentOwner.username}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-green-600">{player.totalPoints} pts</p>
-                          <p className="text-xs text-gray-500">{formatPrice(player.nowCostHalfM)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-
-        {/* Manager Performance Chart */}
-        <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manager Performance Over Time</CardTitle>
-              <CardDescription>
-                Compare up to 3 managers' cumulative points across gameweeks
-              </CardDescription>
-              <div className="mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Manager 1</label>
-                    <Select value={selectedManager1} onValueChange={setSelectedManager1}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select manager" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {managerStats.map(manager => (
-                          <SelectItem key={manager.username} value={manager.username}>
-                            {manager.name} ({manager.username})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Manager 2</label>
-                    <Select value={selectedManager2} onValueChange={setSelectedManager2}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select manager" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {managerStats.map(manager => (
-                          <SelectItem key={manager.username} value={manager.username}>
-                            {manager.name} ({manager.username})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Manager 3</label>
-                    <Select value={selectedManager3} onValueChange={setSelectedManager3}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select manager" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {managerStats.map(manager => (
-                          <SelectItem key={manager.username} value={manager.username}>
-                            {manager.name} ({manager.username})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="gameweek" 
-                      tick={{ fontSize: 12 }}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Cumulative Points by Day</CardTitle>
+            <CardDescription>
+              Select up to three managers. Each day is based on fixture kickoff date in Los Angeles.
+            </CardDescription>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+              <Select value={selectedManager1} onValueChange={setSelectedManager1}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select manager 1" />
+                </SelectTrigger>
+                <SelectContent>
+                  {managerChoices.map((manager) => (
+                    <SelectItem key={`m1-${manager.id}`} value={manager.username}>
+                      {manager.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedManager2} onValueChange={setSelectedManager2}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select manager 2" />
+                </SelectTrigger>
+                <SelectContent>
+                  {managerChoices.map((manager) => (
+                    <SelectItem key={`m2-${manager.id}`} value={manager.username}>
+                      {manager.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedManager3} onValueChange={setSelectedManager3}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select manager 3" />
+                </SelectTrigger>
+                <SelectContent>
+                  {managerChoices.map((manager) => (
+                    <SelectItem key={`m3-${manager.id}`} value={manager.username}>
+                      {manager.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="dayLabel" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip
+                    formatter={(value, name) => [`${value} pts`, name]}
+                    labelFormatter={(_, payload) => {
+                      const row = payload?.[0]?.payload as ChartDayPoint | undefined
+                      return row ? `LA day: ${row.day}` : 'LA day'
+                    }}
+                  />
+                  <Legend />
+                  {selectedManagers.map((manager, index) => (
+                    <Line
+                      key={manager.id}
+                      type="monotone"
+                      dataKey={manager.username}
+                      stroke={managerLineColors[index % managerLineColors.length]}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      connectNulls
                     />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      label={{ value: 'Cumulative Points', angle: -90, position: 'insideLeft' }}
-                    />
-                    <Tooltip 
-                      formatter={(value, name) => [`${value} points`, name]}
-                      labelFormatter={(label) => `Gameweek: ${label}`}
-                    />
-                    <Legend />
-                    {filteredManagerStats.map((manager, index) => {
-                      const colors = ['#8884d8', '#82ca9d', '#ffc658']
-                      return (
-                        <Line 
-                          key={manager.username}
-                          type="monotone" 
-                          dataKey={manager.name}
-                          stroke={colors[index % colors.length]}
-                          strokeWidth={2}
-                          name={manager.name}
-                        />
-                      )
-                    })}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Manager Summary Table */}
-        <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manager Summary</CardTitle>
-              <CardDescription>
-                Current standings and performance metrics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle>Points Matrix</CardTitle>
+            <CardDescription>
+              {matrix.fixtures.length} finished fixtures · {matrix.managers.length} managers
+            </CardDescription>
+            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-4 h-4 rounded-sm bg-green-500" /> 3 pts
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-4 h-4 rounded-sm bg-yellow-400" /> 1 pt
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-4 h-4 rounded-sm bg-gray-300" /> 0 pts
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 sm:px-2 pb-4">
+            {matrix.fixtures.length === 0 ? (
+              <p className="text-sm text-gray-600 px-4 sm:px-6">No finished matches yet.</p>
+            ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="border-collapse text-sm">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Manager</th>
-                      <th className="text-right p-2">Total Points</th>
-                      <th className="text-right p-2">Avg per GW</th>
-                      <th className="text-right p-2">Best GW</th>
-                      <th className="text-right p-2">Worst GW</th>
+                    <tr>
+                      <th className="sticky left-0 top-0 z-30 bg-gray-100 border-b border-r border-gray-200 p-2 w-[5.5rem] min-w-[5.5rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]" />
+                      {matrix.managers.map((manager) => (
+                        <th
+                          key={manager.id}
+                          className="sticky top-0 z-20 bg-gray-100 border-b border-gray-200 p-1 min-w-[2.25rem] max-w-[2.25rem]"
+                        >
+                          <Link
+                            href={`/wc2026/managers/${manager.id}`}
+                            className="block text-[10px] leading-tight font-medium text-blue-600 hover:underline [writing-mode:vertical-lr] max-h-24 truncate mx-auto py-1"
+                            title={`${manager.username} (${manager.totalPoints} pts)`}
+                          >
+                            {manager.username}
+                          </Link>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {managerStats
-                      .sort((a, b) => b.totalPoints - a.totalPoints)
-                      .map((manager, index) => {
-                        const avgPoints = manager.gameweekPoints.length > 0 
-                          ? (manager.totalPoints / manager.gameweekPoints.length).toFixed(1)
-                          : '0.0'
-                        const bestGW = manager.gameweekPoints.length > 0
-                          ? Math.max(...manager.gameweekPoints.map(gw => gw.points))
-                          : 0
-                        const worstGW = manager.gameweekPoints.length > 0
-                          ? Math.min(...manager.gameweekPoints.map(gw => gw.points))
-                          : 0
-
-                        return (
-                          <tr key={manager.username} className="border-b hover:bg-gray-50">
-                            <td className="p-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-lg">#{index + 1}</span>
-                                <div>
-                                  <p className="font-medium">{manager.name}</p>
-                                  <p className="text-sm text-gray-600">@{manager.username}</p>
-                                </div>
-                              </div>
+                    {matrix.fixtures.map((fixture) => (
+                      <tr key={fixture.id} className="group">
+                        <td
+                          className="sticky left-0 z-10 bg-white border-r border-b border-gray-200 p-1 w-[5.5rem] min-w-[5.5rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] group-hover:bg-gray-50"
+                          title={`${fixture.homeTeam} vs ${fixture.awayTeam} (${fixture.homeScore90}-${fixture.awayScore90})`}
+                        >
+                          <WcFixtureLine
+                            variant="compact"
+                            homeTeam={fixture.homeTeam}
+                            awayTeam={fixture.awayTeam}
+                            homeCrest={fixture.homeCrest}
+                            awayCrest={fixture.awayCrest}
+                            homeScore90={fixture.homeScore90}
+                            awayScore90={fixture.awayScore90}
+                          />
+                        </td>
+                        {matrix.managers.map((manager) => {
+                          const points = matrix.cells[fixture.id]?.[manager.id] ?? 0
+                          return (
+                            <td
+                              key={manager.id}
+                              className="border-b border-gray-200 p-0.5"
+                              title={`${manager.username}: ${fixture.homeTeam} vs ${fixture.awayTeam} - ${points} pts`}
+                            >
+                              <div className={`w-8 h-8 rounded-sm mx-auto ${pointCellClass(points)}`} />
                             </td>
-                            <td className="text-right p-2 font-bold text-green-600">
-                              {manager.totalPoints}
-                            </td>
-                            <td className="text-right p-2">{avgPoints}</td>
-                            <td className="text-right p-2 text-green-600">{bestGW}</td>
-                            <td className="text-right p-2 text-red-600">{worstGW}</td>
-                          </tr>
-                        )
-                      })}
+                          )
+                        })}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
