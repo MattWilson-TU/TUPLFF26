@@ -2,15 +2,16 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { WcFixtureLine } from '@/components/wc2026-fixture-line'
-import { hasResult } from '@/lib/wc2026-scoring'
+import { formatStageLabel, hasResult } from '@/lib/wc2026-scoring'
 
 interface Standing {
   id: string
@@ -27,6 +28,8 @@ interface Fixture {
   homeCrest: string | null
   awayCrest: string | null
   kickoffBst: string
+  stage: string | null
+  groupName: string | null
   stageLabel: string
   status: string
   locked: boolean
@@ -56,6 +59,57 @@ function getPointsBadgeClass(points: number): string {
   return 'bg-gray-400 hover:bg-gray-400'
 }
 
+interface FixtureSection {
+  id: string
+  title: string
+  fixtures: Fixture[]
+}
+
+function groupFixturesBySection(fixtures: Fixture[]): FixtureSection[] {
+  const groupStage: Fixture[] = []
+  const knockoutByStage = new Map<string, Fixture[]>()
+
+  for (const fixture of fixtures) {
+    if (fixture.groupName) {
+      groupStage.push(fixture)
+      continue
+    }
+
+    const stageKey = fixture.stage ?? 'knockout'
+    const list = knockoutByStage.get(stageKey) ?? []
+    list.push(fixture)
+    knockoutByStage.set(stageKey, list)
+  }
+
+  const sections: FixtureSection[] = []
+  if (groupStage.length > 0) {
+    sections.push({ id: 'group-stage', title: 'Group stage', fixtures: groupStage })
+  }
+
+  for (const [stage, stageFixtures] of knockoutByStage) {
+    sections.push({
+      id: `knockout-${stage}`,
+      title: formatStageLabel(stage, null) || 'Knockout',
+      fixtures: stageFixtures,
+    })
+  }
+
+  return sections
+}
+
+function defaultExpandedSections(sections: FixtureSection[]): Record<string, boolean> {
+  const expanded: Record<string, boolean> = {}
+  for (const section of sections) {
+    if (section.id === 'group-stage') {
+      const allFinished = section.fixtures.every((fixture) => fixture.finished)
+      expanded[section.id] = !allFinished
+    } else {
+      expanded[section.id] = true
+    }
+  }
+  return expanded
+}
+
 export default function Wc2026Page() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -67,6 +121,17 @@ export default function Wc2026Page() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [draftScores, setDraftScores] = useState<Record<string, { home: string; away: string }>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  const sectionsInitialized = useRef(false)
+
+  const fixtureSections = useMemo(() => groupFixturesBySection(fixtures), [fixtures])
+
+  useEffect(() => {
+    if (fixtureSections.length === 0) return
+    if (sectionsInitialized.current) return
+    setExpandedSections(defaultExpandedSections(fixtureSections))
+    sectionsInitialized.current = true
+  }, [fixtureSections])
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -121,13 +186,25 @@ export default function Wc2026Page() {
     if (session) loadData()
   }, [session, loadData])
 
+  function toggleSection(sectionId: string) {
+    setExpandedSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }))
+  }
+
   function scrollToNextFixture() {
     const next = fixtures.find((f) => !f.locked)
     if (!next) return
-    document.getElementById(`fixture-${next.id}`)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    })
+
+    const section = fixtureSections.find((item) => item.fixtures.some((fixture) => fixture.id === next.id))
+    if (section) {
+      setExpandedSections((prev) => ({ ...prev, [section.id]: true }))
+    }
+
+    window.setTimeout(() => {
+      document.getElementById(`fixture-${next.id}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    }, 50)
   }
 
   async function savePrediction(fixtureId: string) {
@@ -158,6 +235,142 @@ export default function Wc2026Page() {
     } finally {
       setSavingId(null)
     }
+  }
+
+  function renderFixturePanel(fixture: Fixture) {
+    const draft = draftScores[fixture.id] ?? { home: '', away: '' }
+    const canEdit = !isAdmin && !fixture.locked && !fixture.finished
+    const resultKnown = hasResult(fixture.homeScore90, fixture.awayScore90)
+    const isClickable = fixture.locked
+
+    const panelContent = (
+      <>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <Badge variant="outline">{fixture.stageLabel}</Badge>
+            {fixture.finished ? (
+              <Badge variant="secondary">Finished</Badge>
+            ) : fixture.inProgress ? (
+              <Badge variant="destructive">In progress</Badge>
+            ) : fixture.locked ? (
+              <Badge variant="destructive">Locked</Badge>
+            ) : (
+              <Badge>Open</Badge>
+            )}
+            {fixture.points !== null && (
+              <Badge className={getPointsBadgeClass(fixture.points)}>
+                {fixture.points} pts
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-gray-500">{fixture.kickoffBst} BST</p>
+          <div className="mt-2">
+            <WcFixtureLine
+              homeTeam={fixture.homeTeam}
+              awayTeam={fixture.awayTeam}
+              homeCrest={fixture.homeCrest}
+              awayCrest={fixture.awayCrest}
+              homeScore90={resultKnown ? fixture.homeScore90 : null}
+              awayScore90={resultKnown ? fixture.awayScore90 : null}
+            />
+          </div>
+          {resultKnown && (
+            <p className="text-xs text-gray-500 mt-1">Result after 90 minutes</p>
+          )}
+          {fixture.missed && (
+            <p className="text-sm text-gray-600 mt-1">No prediction entered — 0 pts</p>
+          )}
+          {fixture.prediction && (
+            <p className="text-sm text-gray-600 mt-1 break-words">
+              Your prediction: {fixture.prediction.homeScore} – {fixture.prediction.awayScore}
+            </p>
+          )}
+          {isClickable && (
+            <p className="text-sm text-blue-600 mt-2 hidden md:block">
+              {fixture.finished
+                ? 'View all predictions & points →'
+                : 'View all manager predictions →'}
+            </p>
+          )}
+        </div>
+
+        {canEdit ? (
+          <div className="flex items-center gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-gray-100">
+            <Input
+              type="number"
+              min={0}
+              max={20}
+              className="w-14 sm:w-16 text-center"
+              placeholder="H"
+              value={draft.home}
+              onChange={(e) =>
+                setDraftScores((prev) => ({
+                  ...prev,
+                  [fixture.id]: { ...draft, home: e.target.value },
+                }))
+              }
+            />
+            <span className="text-gray-400 shrink-0">–</span>
+            <Input
+              type="number"
+              min={0}
+              max={20}
+              className="w-14 sm:w-16 text-center"
+              placeholder="A"
+              value={draft.away}
+              onChange={(e) =>
+                setDraftScores((prev) => ({
+                  ...prev,
+                  [fixture.id]: { ...draft, away: e.target.value },
+                }))
+              }
+            />
+            <Button
+              size="sm"
+              className="ml-auto shrink-0"
+              onClick={() => savePrediction(fixture.id)}
+              disabled={savingId === fixture.id}
+            >
+              {savingId === fixture.id ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        ) : null}
+      </>
+    )
+
+    const panelClass = getFixturePanelClass(fixture)
+    const fixtureHref = `/wc2026/fixtures/${fixture.id}`
+
+    if (isClickable) {
+      return (
+        <div id={`fixture-${fixture.id}`} key={fixture.id} className="scroll-mt-24">
+          <button
+            type="button"
+            onClick={() => router.push(fixtureHref)}
+            aria-label={
+              fixture.finished
+                ? `View all predictions and points for ${fixture.homeTeam} vs ${fixture.awayTeam}`
+                : `View all manager predictions for ${fixture.homeTeam} vs ${fixture.awayTeam}`
+            }
+            className={`${panelClass} md:hidden w-full text-left touch-manipulation active:opacity-90 transition-opacity`}
+          >
+            {panelContent}
+          </button>
+          <Link
+            href={fixtureHref}
+            className={`${panelClass} hidden md:flex no-underline text-inherit hover:shadow-md transition-shadow cursor-pointer`}
+          >
+            {panelContent}
+          </Link>
+        </div>
+      )
+    }
+
+    return (
+      <div id={`fixture-${fixture.id}`} key={fixture.id} className={`${panelClass} scroll-mt-24`}>
+        {panelContent}
+      </div>
+    )
   }
 
   if (status === 'loading' || isLoading) {
@@ -279,7 +492,7 @@ export default function Wc2026Page() {
           <CardHeader className="px-4 sm:px-6">
             <CardTitle>Fixtures</CardTitle>
             <CardDescription>
-              Kickoff times shown in BST. Predictions lock at kickoff.
+              Kickoff times shown in BST. Predictions lock at kickoff. Tap a section to expand or collapse.
               <br />
               Result after 90 minutes
             </CardDescription>
@@ -290,139 +503,34 @@ export default function Wc2026Page() {
                 No fixtures loaded yet. Ask admin to run a WC2026 data sync.
               </p>
             ) : (
-              <div className="space-y-4">
-                {fixtures.map((fixture) => {
-                  const draft = draftScores[fixture.id] ?? { home: '', away: '' }
-                  const canEdit = !isAdmin && !fixture.locked && !fixture.finished
-                  const resultKnown = hasResult(fixture.homeScore90, fixture.awayScore90)
-                  const isClickable = fixture.locked
-
-                  const panelContent = (
-                    <>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <Badge variant="outline">{fixture.stageLabel}</Badge>
-                          {fixture.finished ? (
-                            <Badge variant="secondary">Finished</Badge>
-                          ) : fixture.inProgress ? (
-                            <Badge variant="destructive">In progress</Badge>
-                          ) : fixture.locked ? (
-                            <Badge variant="destructive">Locked</Badge>
-                          ) : (
-                            <Badge>Open</Badge>
-                          )}
-                          {fixture.points !== null && (
-                            <Badge className={getPointsBadgeClass(fixture.points)}>
-                              {fixture.points} pts
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">{fixture.kickoffBst} BST</p>
-                        <div className="mt-2">
-                          <WcFixtureLine
-                            homeTeam={fixture.homeTeam}
-                            awayTeam={fixture.awayTeam}
-                            homeCrest={fixture.homeCrest}
-                            awayCrest={fixture.awayCrest}
-                            homeScore90={resultKnown ? fixture.homeScore90 : null}
-                            awayScore90={resultKnown ? fixture.awayScore90 : null}
-                          />
-                        </div>
-                        {resultKnown && (
-                          <p className="text-xs text-gray-500 mt-1">Result after 90 minutes</p>
-                        )}
-                        {fixture.missed && (
-                          <p className="text-sm text-gray-600 mt-1">No prediction entered — 0 pts</p>
-                        )}
-                        {fixture.prediction && (
-                          <p className="text-sm text-gray-600 mt-1 break-words">
-                            Your prediction: {fixture.prediction.homeScore} – {fixture.prediction.awayScore}
-                          </p>
-                        )}
-                        {isClickable && (
-                          <p className="text-sm text-blue-600 mt-2 hidden md:block">
-                            {fixture.finished
-                              ? 'View all predictions & points →'
-                              : 'View all manager predictions →'}
-                          </p>
-                        )}
-                      </div>
-
-                      {canEdit ? (
-                        <div className="flex items-center gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-gray-100">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={20}
-                            className="w-14 sm:w-16 text-center"
-                            placeholder="H"
-                            value={draft.home}
-                            onChange={(e) =>
-                              setDraftScores((prev) => ({
-                                ...prev,
-                                [fixture.id]: { ...draft, home: e.target.value },
-                              }))
-                            }
-                          />
-                          <span className="text-gray-400 shrink-0">–</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={20}
-                            className="w-14 sm:w-16 text-center"
-                            placeholder="A"
-                            value={draft.away}
-                            onChange={(e) =>
-                              setDraftScores((prev) => ({
-                                ...prev,
-                                [fixture.id]: { ...draft, away: e.target.value },
-                              }))
-                            }
-                          />
-                          <Button
-                            size="sm"
-                            className="ml-auto shrink-0"
-                            onClick={() => savePrediction(fixture.id)}
-                            disabled={savingId === fixture.id}
-                          >
-                            {savingId === fixture.id ? 'Saving...' : 'Save'}
-                          </Button>
-                        </div>
-                      ) : null}
-                    </>
-                  )
-
-                  const panelClass = getFixturePanelClass(fixture)
-                  const fixtureHref = `/wc2026/fixtures/${fixture.id}`
-
-                  if (isClickable) {
-                    return (
-                      <div id={`fixture-${fixture.id}`} key={fixture.id} className="scroll-mt-24">
-                        <button
-                          type="button"
-                          onClick={() => router.push(fixtureHref)}
-                          aria-label={
-                            fixture.finished
-                              ? `View all predictions and points for ${fixture.homeTeam} vs ${fixture.awayTeam}`
-                              : `View all manager predictions for ${fixture.homeTeam} vs ${fixture.awayTeam}`
-                          }
-                          className={`${panelClass} md:hidden w-full text-left touch-manipulation active:opacity-90 transition-opacity`}
-                        >
-                          {panelContent}
-                        </button>
-                        <Link
-                          href={fixtureHref}
-                          className={`${panelClass} hidden md:flex no-underline text-inherit hover:shadow-md transition-shadow cursor-pointer`}
-                        >
-                          {panelContent}
-                        </Link>
-                      </div>
-                    )
-                  }
+              <div className="space-y-6">
+                {fixtureSections.map((section) => {
+                  const isExpanded = expandedSections[section.id] ?? true
+                  const finishedCount = section.fixtures.filter((fixture) => fixture.finished).length
 
                   return (
-                    <div id={`fixture-${fixture.id}`} key={fixture.id} className={`${panelClass} scroll-mt-24`}>
-                      {panelContent}
+                    <div key={section.id} className="border rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(section.id)}
+                        aria-expanded={isExpanded}
+                        className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-5 w-5 shrink-0 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 shrink-0 text-gray-500" />
+                        )}
+                        <span className="font-semibold text-gray-900">{section.title}</span>
+                        <span className="text-sm text-gray-500 ml-auto">
+                          {finishedCount}/{section.fixtures.length} finished
+                        </span>
+                      </button>
+                      {isExpanded && (
+                        <div className="space-y-4 p-4 border-t border-gray-200">
+                          {section.fixtures.map((fixture) => renderFixturePanel(fixture))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}

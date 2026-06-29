@@ -53,6 +53,8 @@ export async function GET() {
         awayCrest: f.awayCrest,
         kickoffUtc: f.kickoffUtc.toISOString(),
         kickoffBst: formatKickoffBst(f.kickoffUtc),
+        stage: f.stage,
+        groupName: f.groupName,
         stageLabel: formatStageLabel(f.stage, f.groupName),
         status: f.status,
         locked,
