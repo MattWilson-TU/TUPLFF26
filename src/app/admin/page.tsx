@@ -92,6 +92,25 @@ export default function AdminPage() {
     }
   }
 
+  async function resetSeason() {
+    if (!confirm(
+      'This will permanently delete all auction data, squads, transfers, gameweek points, and player/team data. Manager accounts and WC2026 predictions will be kept. Budgets will reset to £150m. Continue?'
+    )) {
+      return
+    }
+
+    const res = await fetch('/api/admin/season/reset', { method: 'POST' })
+    if (res.ok) {
+      fetchUsers()
+      alert(
+        'Season reset complete.\n\nNext steps:\n1. Upload FPL Data or run Cloud Update\n2. Start Auction'
+      )
+    } else {
+      const error = await res.json().catch(() => ({}))
+      alert(error.error || 'Failed to reset season')
+    }
+  }
+
   async function refreshAllScores() {
     try {
       setIsRefreshingScores(true)
@@ -337,6 +356,9 @@ export default function AdminPage() {
                   variant="destructive"
                 >
                   Clear Auction Data
+                </Button>
+                <Button onClick={resetSeason} variant="destructive">
+                  Reset Season
                 </Button>
                 <Button 
                   onClick={async () => {
