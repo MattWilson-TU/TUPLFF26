@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { fetchFinishedOrCurrentEventIds } from '@/lib/fpl'
+import { gameweekToPhase } from '@/lib/scoring'
 
 export async function GET() {
   try {
@@ -17,13 +18,11 @@ export async function GET() {
     
     try {
       finishedOrCurrent = await fetchFinishedOrCurrentEventIds()
-      currentPhase = finishedOrCurrent.length > 0 ? 
-        (finishedOrCurrent[finishedOrCurrent.length - 1] <= 11 ? 1 : 
-         finishedOrCurrent[finishedOrCurrent.length - 1] <= 26 ? 2 :
-         finishedOrCurrent[finishedOrCurrent.length - 1] <= 31 ? 3 : 4) : 1
+      const latestGw = finishedOrCurrent[finishedOrCurrent.length - 1]
+      currentPhase = finishedOrCurrent.length > 0 ? gameweekToPhase(latestGw) : 1
     } catch (error) {
       console.warn('Failed to fetch FPL data, using fallback:', error)
-      // Fallback: assume we're in phase 1 (first 11 gameweeks)
+      // Fallback: assume we're in phase 1 (first 10 gameweeks)
       currentPhase = 1
     }
 

@@ -11,22 +11,22 @@ import Link from 'next/link'
 const PHASES = [
   {
     phase: 1,
-    gameweeks: '1-11',
-    description: 'Opening phase of the season'
+    gameweeks: '1-10',
+    description: 'Opening phase of the season (auction after GW2; GW1-2 points count)'
   },
   {
     phase: 2,
-    gameweeks: '12-26',
+    gameweeks: '11-23',
     description: 'Mid-season phase'
   },
   {
     phase: 3,
-    gameweeks: '27-31',
+    gameweeks: '24-30',
     description: 'Late season phase'
   },
   {
     phase: 4,
-    gameweeks: '32-38',
+    gameweeks: '31-38',
     description: 'Final phase of the season'
   }
 ]

@@ -582,11 +582,12 @@ The application is containerized and can be deployed to any container orchestrat
 - Valid formations enforced
 
 ### Season Structure
-- **Phase 1**: Gameweeks 1-11
-- **Phase 2**: Gameweeks 12-26
-- **Phase 3**: Gameweeks 27-31
-- **Phase 4**: Gameweeks 32-38
+- **Phase 1**: Gameweeks 1-10
+- **Phase 2**: Gameweeks 11-23
+- **Phase 3**: Gameweeks 24-30
+- **Phase 4**: Gameweeks 31-38
 - Transfer windows between phases
+- Auction takes place after Gameweek 2; Phase 1 squads include points from Gameweeks 1 and 2
 
 ## Contributing
 

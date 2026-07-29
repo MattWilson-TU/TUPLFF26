@@ -45,9 +45,9 @@ export async function updateGameweekPoints(gw: number) {
 }
 
 export function gameweekToPhase(gw: number) {
-  if (gw >= 1 && gw <= 11) return 1
-  if (gw >= 12 && gw <= 26) return 2
-  if (gw >= 27 && gw <= 31) return 3
+  if (gw >= 1 && gw <= 10) return 1
+  if (gw >= 11 && gw <= 23) return 2
+  if (gw >= 24 && gw <= 30) return 3
   return 4
 }
 

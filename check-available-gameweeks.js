@@ -24,7 +24,7 @@ async function checkAvailableGameweeks() {
     console.log('├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤')
     
     for (const event of events) {
-      const phase = event.id <= 11 ? 1 : event.id <= 26 ? 2 : event.id <= 31 ? 3 : 4
+      const phase = event.id <= 10 ? 1 : event.id <= 23 ? 2 : event.id <= 30 ? 3 : 4
       const status = event.is_current ? 'CURRENT' : event.finished ? 'FINISHED' : 'UNKNOWN'
       const dataChecked = event.data_checked ? '✅' : '❌'
       const name = event.name || `GW${event.id}`

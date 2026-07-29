@@ -80,7 +80,7 @@ async function main() {
   // Create initial gameweeks
   const gameweeks = Array.from({ length: 38 }, (_, i) => ({
     id: i + 1,
-    phase: i < 11 ? 1 : i < 26 ? 2 : i < 31 ? 3 : 4,
+    phase: i < 10 ? 1 : i < 23 ? 2 : i < 30 ? 3 : 4,
   }))
 
   await prisma.gameweek.createMany({

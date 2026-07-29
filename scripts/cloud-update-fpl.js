@@ -124,7 +124,7 @@ async function downloadAndUpdateFPLData() {
         // Store gameweek points data
         data.gameweeks[gw] = {
           gameweekId: gw,
-          phase: gw <= 11 ? 1 : gw <= 26 ? 2 : gw <= 31 ? 3 : 4,
+          phase: gw <= 10 ? 1 : gw <= 23 ? 2 : gw <= 30 ? 3 : 4,
           players: {}
         }
         

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { gameweekToPhase } from '@/lib/scoring'
 
 export async function POST() {
   try {
@@ -29,6 +30,14 @@ export async function POST() {
       await tx.gameweek.updateMany({
         data: { startedAt: null, completedAt: null },
       })
+
+      for (let gw = 1; gw <= 38; gw++) {
+        await tx.gameweek.upsert({
+          where: { id: gw },
+          create: { id: gw, phase: gameweekToPhase(gw) },
+          update: { phase: gameweekToPhase(gw) },
+        })
+      }
 
       await tx.dataSync.upsert({
         where: { id: 'singleton' },
