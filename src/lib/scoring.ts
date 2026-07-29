@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { fetchLiveEvent } from './fpl'
+import { fetchFinishedOrCurrentEventIds, fetchLiveEvent } from './fpl'
 
 export async function updateGameweekPoints(gw: number) {
   try {
@@ -49,6 +49,44 @@ export function gameweekToPhase(gw: number) {
   if (gw >= 11 && gw <= 23) return 2
   if (gw >= 24 && gw <= 30) return 3
   return 4
+}
+
+/**
+ * Resolve the league's current phase from local season data first.
+ * After a season reset (no points uploaded), always return Phase 1 so we
+ * do not inherit last season's finished gameweeks from the FPL API.
+ */
+export async function getCurrentPhase(): Promise<{ phase: number; gameweekId: number | null }> {
+  const pointsCount = await prisma.gameweekPlayerPoints.count()
+  if (pointsCount === 0) {
+    return { phase: 1, gameweekId: null }
+  }
+
+  let recentGwId: number | null = null
+
+  try {
+    const finishedOrCurrent = await fetchFinishedOrCurrentEventIds()
+    recentGwId = finishedOrCurrent.length > 0
+      ? finishedOrCurrent[finishedOrCurrent.length - 1]
+      : null
+  } catch (error) {
+    console.warn('Failed to fetch FPL data for current phase:', error)
+  }
+
+  if (recentGwId === null) {
+    const gameweekWithData = await prisma.gameweekPlayerPoints.groupBy({
+      by: ['gameweekId'],
+      _count: { points: true },
+      orderBy: { gameweekId: 'desc' },
+      take: 1,
+    })
+    recentGwId = gameweekWithData.length > 0 ? gameweekWithData[0].gameweekId : null
+  }
+
+  return {
+    phase: recentGwId ? gameweekToPhase(recentGwId) : 1,
+    gameweekId: recentGwId,
+  }
 }
 
 

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { fetchFinishedOrCurrentEventIds } from '@/lib/fpl'
-import { gameweekToPhase } from '@/lib/scoring'
+import { getCurrentPhase } from '@/lib/scoring'
 
 export async function GET(req: Request) {
   try {
@@ -54,16 +53,7 @@ export async function GET(req: Request) {
       })
     )
 
-    // Determine current active phase to check if players are in current phase squads
-    let currentPhase = 1
-    try {
-      const finishedOrCurrent = await fetchFinishedOrCurrentEventIds()
-      const latestGw = finishedOrCurrent[finishedOrCurrent.length - 1]
-      currentPhase = finishedOrCurrent.length > 0 ? gameweekToPhase(latestGw) : 1
-    } catch (error) {
-      console.warn('Failed to fetch FPL data for current phase, using fallback:', error)
-      currentPhase = 1
-    }
+    const { phase: currentPhase } = await getCurrentPhase()
 
     // Get all players in current phase squads
     const currentPhaseSquadPlayers = await prisma.squadPlayer.findMany({

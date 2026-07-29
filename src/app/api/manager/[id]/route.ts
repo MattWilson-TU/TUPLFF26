@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { fetchFinishedOrCurrentEventIds } from '@/lib/fpl'
-import { gameweekToPhase } from '@/lib/scoring'
+import { getCurrentPhase } from '@/lib/scoring'
 
 export async function GET(
   request: Request,
@@ -32,19 +31,7 @@ export async function GET(
       return NextResponse.json({ error: 'Manager not found' }, { status: 404 })
     }
 
-    // Determine current active phase based on finished/current gameweeks
-    let finishedOrCurrent: number[] = []
-    let currentPhase = 1
-    
-    try {
-      finishedOrCurrent = await fetchFinishedOrCurrentEventIds()
-      const latestGw = finishedOrCurrent[finishedOrCurrent.length - 1]
-      currentPhase = finishedOrCurrent.length > 0 ? gameweekToPhase(latestGw) : 1
-    } catch (error) {
-      console.warn('Failed to fetch FPL data, using fallback:', error)
-      // Fallback: assume we're in phase 1 (first 10 gameweeks)
-      currentPhase = 1
-    }
+    const { phase: currentPhase } = await getCurrentPhase()
 
     // Fetch squads for all phases (players owned across phases)
     const squads = await prisma.squad.findMany({
