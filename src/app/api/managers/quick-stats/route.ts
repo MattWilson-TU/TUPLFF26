@@ -23,7 +23,7 @@ export async function GET() {
 
     // Compute total points across all phases for all managers for standings
     const managers = await prisma.manager.findMany({
-      where: { username: { not: 'Admin01' } },
+      where: { username: { not: 'Admin01' }, game2627Enabled: true },
       include: {
         squads: {
           include: { players: { select: { playerId: true } } },

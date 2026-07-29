@@ -5,7 +5,7 @@ import { fetchFinishedOrCurrentEventIds } from '@/lib/fpl'
 export async function GET() {
   try {
     const managers = await prisma.manager.findMany({
-      where: { username: { not: 'Admin01' } },
+      where: { username: { not: 'Admin01' }, game2627Enabled: true },
       include: {
         squads: {
           include: {

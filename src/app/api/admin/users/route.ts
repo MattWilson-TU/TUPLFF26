@@ -10,7 +10,7 @@ const userSchema = z.object({
   name: z.string().min(2),
   password: z.string().min(6).optional(),
   budgetKGBP: z.number().int().min(0).optional(),
-  wc2026Enabled: z.boolean().optional(),
+  game2627Enabled: z.boolean().optional(),
 })
 
 async function ensureAdmin() {
@@ -31,7 +31,7 @@ export async function GET() {
       username: true,
       name: true,
       budgetKGBP: true,
-      wc2026Enabled: true,
+      game2627Enabled: true,
       createdAt: true,
     },
     orderBy: { createdAt: 'desc' },
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       passwordHash: passwordHash ?? await bcrypt.hash('changeme', 12),
       budgetKGBP: parsed.budgetKGBP ?? 150000,
     },
-    select: { id: true, username: true, name: true, budgetKGBP: true, wc2026Enabled: true },
+    select: { id: true, username: true, name: true, budgetKGBP: true, game2627Enabled: true },
   })
   return NextResponse.json(created)
 }
@@ -70,13 +70,13 @@ export async function PUT(request: NextRequest) {
   if (parsed.username) updateData.username = parsed.username
   if (parsed.name) updateData.name = parsed.name
   if (parsed.budgetKGBP !== undefined) updateData.budgetKGBP = parsed.budgetKGBP
-  if (parsed.wc2026Enabled !== undefined) updateData.wc2026Enabled = parsed.wc2026Enabled
+  if (parsed.game2627Enabled !== undefined) updateData.game2627Enabled = parsed.game2627Enabled
   if (parsed.password) updateData.passwordHash = await bcrypt.hash(parsed.password, 12)
 
   const updated = await prisma.manager.update({
     where: { id: parsed.id! },
     data: updateData,
-    select: { id: true, username: true, name: true, budgetKGBP: true, wc2026Enabled: true },
+    select: { id: true, username: true, name: true, budgetKGBP: true, game2627Enabled: true },
   })
   return NextResponse.json(updated)
 }

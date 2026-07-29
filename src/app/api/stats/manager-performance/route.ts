@@ -6,7 +6,8 @@ export async function GET() {
     // Get all managers with their squads
     const managers = await prisma.manager.findMany({
       where: {
-        username: { not: 'Admin01' } // Exclude admin
+        username: { not: 'Admin01' },
+        game2627Enabled: true,
       },
       select: {
         id: true,
