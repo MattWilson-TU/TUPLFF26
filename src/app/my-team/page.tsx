@@ -7,6 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import {
+  formatPriceHalfM,
+  formatBudgetKGBP,
+  getRemainingHalfM,
+  totalSpentHalfMFromPrices,
+} from '@/lib/auction-budget'
 
 type GridPlayer = {
   id: number
@@ -34,6 +40,7 @@ export default function MyTeamPage() {
   const [allPlayers, setAllPlayers] = useState<GridPlayer[]>([])
   const [allGameweekIds, setAllGameweekIds] = useState<number[]>([])
   const [activeTab, setActiveTab] = useState<'squad' | 'weekly'>('squad')
+  const [startingBudgetKGBP, setStartingBudgetKGBP] = useState(150000)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin')
@@ -75,6 +82,19 @@ export default function MyTeamPage() {
     loadAuctionStatus()
   }, [])
 
+  useEffect(() => {
+    async function loadManagerBudget() {
+      if (!session?.user?.id) return
+      const res = await fetch('/api/managers')
+      if (res.ok) {
+        const managers = await res.json()
+        const me = managers.find((m: { id: string }) => m.id === session.user?.id)
+        if (me?.budgetKGBP) setStartingBudgetKGBP(me.budgetKGBP)
+      }
+    }
+    if (session?.user?.id) loadManagerBudget()
+  }, [session])
+
   const getPositionColor = (pos: string) => {
     switch (pos) {
       case 'GK': return 'bg-green-100 text-green-800'
@@ -98,6 +118,12 @@ export default function MyTeamPage() {
 
   if (!session) return null
 
+  const totalSpentHalfM = totalSpentHalfMFromPrices(currentPlayers)
+  const remainingHalfM = getRemainingHalfM(startingBudgetKGBP, totalSpentHalfM)
+  const showAuctionSummary =
+    currentPlayers.length > 0 &&
+    (auctionStatus === 'OPEN' || auctionStatus === 'CLOSED')
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -113,15 +139,17 @@ export default function MyTeamPage() {
           </div>
         </div>
 
-        {/* Auction Summary - Show when auction is closed */}
-        {auctionStatus === 'CLOSED' && currentPlayers.length > 0 && (
+        {/* Auction Summary */}
+        {showAuctionSummary && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                🏆 Auction Complete - Your Squad
+                {auctionStatus === 'OPEN' ? 'Auction in Progress' : '🏆 Auction Complete - Your Squad'}
               </CardTitle>
               <CardDescription>
-                Congratulations! You successfully acquired {currentPlayers.length} players in the auction.
+                {auctionStatus === 'OPEN'
+                  ? `You have acquired ${currentPlayers.length} player${currentPlayers.length === 1 ? '' : 's'} so far. Refresh for the latest totals, or join the auction room for live updates.`
+                  : `Congratulations! You successfully acquired ${currentPlayers.length} players in the auction.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -138,22 +166,34 @@ export default function MyTeamPage() {
                     </div>
                     <p className="text-xs text-gray-600 mb-1">{player.team.name}</p>
                     <p className="text-xs font-medium text-green-600">
-                      £{(player.priceHalfM * 0.5).toFixed(1)}m
+                      {formatPriceHalfM(player.priceHalfM)}
                     </p>
                   </div>
                 ))}
               </div>
               <div className="pt-4 border-t">
                 <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Budget:</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {formatBudgetKGBP(startingBudgetKGBP)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-2">
                   <span className="text-sm font-medium">Total Spent:</span>
                   <span className="text-lg font-bold text-green-600">
-                    £{(currentPlayers.reduce((sum, p) => sum + (p.priceHalfM * 0.5), 0)).toFixed(1)}m
+                    {formatPriceHalfM(totalSpentHalfM)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-sm font-medium">Remaining Budget:</span>
                   <span className="text-lg font-bold text-blue-600">
-                    £{(150 - currentPlayers.reduce((sum, p) => sum + (p.priceHalfM * 0.5), 0)).toFixed(1)}m
+                    {formatPriceHalfM(remainingHalfM)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm font-medium">Squad:</span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {currentPlayers.length}/11
                   </span>
                 </div>
               </div>

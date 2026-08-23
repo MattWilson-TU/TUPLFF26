@@ -10,6 +10,12 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useState } from 'react'
+import {
+  formatPriceHalfM,
+  formatBudgetKGBP,
+  getRemainingHalfM,
+  totalSpentHalfMFromPrices,
+} from '@/lib/auction-budget'
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
@@ -37,6 +43,7 @@ export default function DashboardPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [currentPhase, setCurrentPhase] = useState<number | null>(null)
   const [dataLastUpdated, setDataLastUpdated] = useState<string | null>(null)
+  const [startingBudgetKGBP, setStartingBudgetKGBP] = useState(150000)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -141,7 +148,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadMyPlayers() {
-      if (!session?.user?.id || auctionStatus !== 'CLOSED') return
+      if (!session?.user?.id || !auctionStatus) return
       const res = await fetch('/api/my-team')
       if (res.ok) {
         const data = await res.json()
@@ -150,6 +157,19 @@ export default function DashboardPage() {
     }
     loadMyPlayers()
   }, [session, auctionStatus])
+
+  useEffect(() => {
+    async function loadManagerBudget() {
+      if (!session?.user?.id) return
+      const res = await fetch('/api/managers')
+      if (res.ok) {
+        const managers = await res.json()
+        const me = managers.find((m: { id: string }) => m.id === session.user?.id)
+        if (me?.budgetKGBP) setStartingBudgetKGBP(me.budgetKGBP)
+      }
+    }
+    loadManagerBudget()
+  }, [session])
 
   useEffect(() => {
     async function loadCurrentPhase() {
@@ -167,6 +187,10 @@ export default function DashboardPage() {
   }
 
   const last3 = quickStats?.last3ByGw || []
+  const myTotalSpentHalfM = totalSpentHalfMFromPrices(myPlayers)
+  const myRemainingHalfM = getRemainingHalfM(startingBudgetKGBP, myTotalSpentHalfM)
+  const showAuctionSummary = myPlayers.length > 0 && auctionStatus === 'CLOSED'
+  const showLiveAuctionSnapshot = auctionStatus === 'OPEN'
 
   const getPositionColor = (position: string) => {
     switch (position) {
@@ -247,7 +271,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Auction Summary - Show when auction is closed */}
-        {auctionStatus === 'CLOSED' && myPlayers.length > 0 && (
+        {showAuctionSummary && (
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">🏆 Auction Complete - Your Squad</h2>
             <p className="text-gray-600 mb-4">
@@ -266,22 +290,28 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-xs text-gray-600 mb-1">{player.team.name}</p>
                   <p className="text-xs font-medium text-green-600">
-                    £{(player.priceHalfM * 0.5).toFixed(1)}m
+                    {formatPriceHalfM(player.priceHalfM)}
                   </p>
                 </div>
               ))}
             </div>
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Budget:</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {formatBudgetKGBP(startingBudgetKGBP)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mt-2">
                 <span className="text-sm font-medium">Total Spent:</span>
                 <span className="text-lg font-bold text-green-600">
-                  £{(myPlayers.reduce((sum, p) => sum + (p.priceHalfM * 0.5), 0)).toFixed(1)}m
+                  {formatPriceHalfM(myTotalSpentHalfM)}
                 </span>
               </div>
               <div className="flex justify-between items-center mt-2">
                 <span className="text-sm font-medium">Remaining Budget:</span>
                 <span className="text-lg font-bold text-blue-600">
-                  £{(150 - myPlayers.reduce((sum, p) => sum + (p.priceHalfM * 0.5), 0)).toFixed(1)}m
+                  {formatPriceHalfM(myRemainingHalfM)}
                 </span>
               </div>
             </div>
@@ -302,6 +332,32 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {showLiveAuctionSnapshot && (
+                <div className="mb-4 rounded-lg border bg-gray-50 p-3 space-y-2">
+                  <p className="text-xs font-medium text-gray-700">Auction in progress</p>
+                  <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div>
+                      <p className="text-[10px] uppercase text-gray-500">Remaining</p>
+                      <p className="font-semibold text-blue-600">
+                        {formatPriceHalfM(myRemainingHalfM)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-gray-500">Spent</p>
+                      <p className="font-semibold text-green-600">
+                        {formatPriceHalfM(myTotalSpentHalfM)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-gray-500">Squad</p>
+                      <p className="font-semibold">{myPlayers.length}/11</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Refresh this page for the latest totals. Join the auction room for live updates.
+                  </p>
+                </div>
+              )}
               <p className="text-sm text-gray-600 mb-4">
                 Participate in live auctions to build your dream team.
               </p>

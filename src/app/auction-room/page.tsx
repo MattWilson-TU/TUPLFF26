@@ -10,6 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
+import {
+  POSITION_LIMITS,
+  formatPriceHalfM,
+  formatBudgetKGBP,
+  getRemainingHalfM,
+  countPositions,
+} from '@/lib/auction-budget'
 
 interface Player {
   id: number
@@ -59,6 +66,144 @@ interface Manager {
   name: string
   username: string
   budgetKGBP: number
+}
+
+function ManagerBudgetPanel({
+  manager,
+  allocatedPlayers,
+  pendingBidHalfM,
+  showUsername = true,
+}: {
+  manager: Manager
+  allocatedPlayers: AuctionLot[]
+  pendingBidHalfM?: number
+  showUsername?: boolean
+}) {
+  const totalSpentHalfM = allocatedPlayers.reduce(
+    (sum, lot) => sum + (lot.soldPriceHalfM || 0),
+    0
+  )
+  const remainingHalfM = getRemainingHalfM(manager.budgetKGBP, totalSpentHalfM)
+  const positionCounts = countPositions(allocatedPlayers.map((lot) => lot.player))
+  const ifYouWinHalfM =
+    pendingBidHalfM !== undefined
+      ? remainingHalfM - pendingBidHalfM
+      : undefined
+
+  return (
+    <div className="p-3 border rounded-lg">
+      <div className="flex justify-between items-start mb-2 gap-2">
+        <div>
+          {showUsername && (
+            <p className="font-medium text-sm">{manager.username}</p>
+          )}
+          <p className="text-xs text-gray-600">
+            Budget: {formatBudgetKGBP(manager.budgetKGBP)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-wide text-gray-500">Remaining</p>
+          <Badge variant="outline">{formatPriceHalfM(remainingHalfM)}</Badge>
+        </div>
+      </div>
+      <div className="text-xs text-gray-600 space-y-1">
+        <p>Spent: {formatPriceHalfM(totalSpentHalfM)}</p>
+        <p>Squad: {allocatedPlayers.length}/11</p>
+        {ifYouWinHalfM !== undefined && (
+          <p className="text-amber-700">
+            If you win: {formatPriceHalfM(Math.max(0, ifYouWinHalfM))} remaining
+          </p>
+        )}
+      </div>
+      {allocatedPlayers.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-medium text-gray-700 mb-2">Players:</p>
+          <div className="space-y-3 md:hidden">
+            {allocatedPlayers
+              .slice()
+              .sort((a, b) =>
+                (a.player.webName || a.player.secondName).localeCompare(
+                  b.player.webName || b.player.secondName
+                )
+              )
+              .map((lot) => (
+                <div
+                  key={lot.id}
+                  className="flex items-center justify-between gap-2 text-xs border rounded p-2"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">
+                      {lot.player.webName || lot.player.secondName}
+                    </p>
+                    <Badge className={`text-[10px] ${getPositionColor(lot.player.elementType)}`}>
+                      {lot.player.elementType}
+                    </Badge>
+                  </div>
+                  <span className="text-gray-500 shrink-0">
+                    {formatPriceHalfM(lot.soldPriceHalfM || 0)}
+                  </span>
+                </div>
+              ))}
+          </div>
+          <div className="hidden md:grid md:grid-cols-4 gap-2">
+            {(['GK', 'DEF', 'MID', 'FWD'] as const).map((pos) => (
+              <div key={pos} className="border rounded p-2">
+                <p className="text-[10px] font-semibold mb-1">
+                  {pos} {positionCounts[pos]}/{POSITION_LIMITS[pos]}
+                </p>
+                <div className="space-y-1">
+                  {allocatedPlayers
+                    .filter((lot) => lot.player.elementType === pos)
+                    .sort((a, b) =>
+                      (a.player.webName || a.player.secondName).localeCompare(
+                        b.player.webName || b.player.secondName
+                      )
+                    )
+                    .map((lot) => (
+                      <p
+                        key={lot.id}
+                        className="text-[10px] text-gray-700 truncate flex justify-between gap-2"
+                      >
+                        <span>{lot.player.webName || lot.player.secondName}</span>
+                        <span className="text-gray-500 shrink-0">
+                          {formatPriceHalfM(lot.soldPriceHalfM || 0)}
+                        </span>
+                      </p>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {allocatedPlayers.length === 0 && (
+        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+          {(['GK', 'DEF', 'MID', 'FWD'] as const).map((pos) => (
+            <div key={pos} className="border rounded p-2 text-center">
+              <p className="text-[10px] font-semibold text-gray-500">
+                {pos} {positionCounts[pos]}/{POSITION_LIMITS[pos]}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function getPositionColor(position: string) {
+  switch (position) {
+    case 'GK':
+      return 'bg-green-100 text-green-800'
+    case 'DEF':
+      return 'bg-blue-100 text-blue-800'
+    case 'MID':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'FWD':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
 }
 
 export default function AuctionRoomPage() {
@@ -319,23 +464,11 @@ export default function AuctionRoomPage() {
     }
   }
 
-  const formatPrice = (halfMillionUnits: number) => {
-    return `£${(halfMillionUnits * 0.5).toFixed(1)}m`
-  }
+  const formatPrice = formatPriceHalfM
 
   const displayName = (p: Player) => {
     const web = p.webName || p.secondName
     return `${p.firstName} ${p.secondName} (${web})`
-  }
-
-  const getPositionColor = (position: string) => {
-    switch (position) {
-      case 'GK': return 'bg-green-100 text-green-800'
-      case 'DEF': return 'bg-blue-100 text-blue-800'
-      case 'MID': return 'bg-yellow-100 text-yellow-800'
-      case 'FWD': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
   }
 
   const calculateAllInBid = () => {
@@ -375,6 +508,16 @@ export default function AuctionRoomPage() {
   const myManager = managers.find(m => m.id === session.user?.id)
   const myAllocatedPlayers = (auction?.lots || []).filter(l => l.isSold && l.winnerId === session.user?.id)
   const myPlayersCount = myAllocatedPlayers.length
+  const myTotalSpentHalfM = myAllocatedPlayers.reduce(
+    (sum, lot) => sum + (lot.soldPriceHalfM || 0),
+    0
+  )
+  const myRemainingHalfM = myManager
+    ? getRemainingHalfM(myManager.budgetKGBP, myTotalSpentHalfM)
+    : 0
+  const isMyHighBid =
+    !isAdmin && currentBid?.manager.id === session.user?.id
+  const myPendingBidHalfM = isMyHighBid ? currentBid?.amountHalfM : undefined
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -430,6 +573,33 @@ export default function AuctionRoomPage() {
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Main Auction Area */}
           <div className="lg:col-span-3">
+            {!isAdmin && auction?.status === 'OPEN' && myManager && (
+              <div className="sticky top-0 z-10 mb-4 rounded-lg border bg-white shadow-sm px-4 py-3">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Remaining</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {formatPrice(myRemainingHalfM)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Spent</p>
+                    <p className="text-lg font-bold text-green-600">
+                      {formatPrice(myTotalSpentHalfM)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Squad</p>
+                    <p className="text-lg font-bold text-gray-900">{myPlayersCount}/11</p>
+                  </div>
+                </div>
+                {isMyHighBid && currentBid && (
+                  <p className="text-xs text-amber-700 text-center mt-2">
+                    If you win: {formatPrice(Math.max(0, myRemainingHalfM - currentBid.amountHalfM))} remaining
+                  </p>
+                )}
+              </div>
+            )}
             {currentLot ? (
               <Card>
                 <CardHeader>
@@ -718,7 +888,9 @@ export default function AuctionRoomPage() {
                 <Card className="mt-6">
                   <CardHeader>
                     <CardTitle>Manager Squads</CardTitle>
-                    <CardDescription>Budget: £150m | Spent: amount spent | Remaining: budget - spent</CardDescription>
+                    <CardDescription>
+                      Starting budget, spend, and remaining funds for each manager
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -726,50 +898,12 @@ export default function AuctionRoomPage() {
                         const allocatedPlayers = auction?.lots.filter(lot => 
                           lot.isSold && lot.winnerId === manager.id
                         ) || []
-                        const totalSpent = allocatedPlayers.reduce((sum, lot) => 
-                          sum + (lot.soldPriceHalfM || 0), 0
-                        )
-                        // Budget terminology: Budget (starting £150m) - Spent = Remaining
-                        const budget = manager.budgetKGBP // Starting budget (£150m)
-                        const remainingBudget = budget - (totalSpent * 500)
                         return (
-                          <div key={manager.id} className="p-3 border rounded-lg">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <p className="font-medium text-sm">{manager.username}</p>
-                              </div>
-                              <Badge variant="outline">
-                                {formatPrice(remainingBudget / 500)}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              <p>Spent: {formatPrice(totalSpent)}</p>
-                              <p>Players: {allocatedPlayers.length}</p>
-                            </div>
-                            {allocatedPlayers.length > 0 && (
-                              <div className="mt-3">
-                                <p className="text-xs font-medium text-gray-700 mb-2">Players:</p>
-                                <div className="grid grid-cols-4 gap-2">
-                                  {(['GK','DEF','MID','FWD'] as const).map(pos => (
-                                    <div key={pos} className="border rounded p-2">
-                                      <p className="text-[10px] font-semibold mb-1">{pos}</p>
-                                      <div className="space-y-1">
-                                        {allocatedPlayers
-                                          .filter(l => l.player.elementType === pos)
-                                          .sort((a,b) => (a.player.webName || a.player.secondName).localeCompare(b.player.webName || b.player.secondName))
-                                          .map(l => (
-                                            <p key={l.id} className="text-[10px] text-gray-700 truncate flex justify-between gap-2">
-                                              <span>{(l.player.webName || l.player.secondName)}</span>
-                                              <span className="text-gray-500">{formatPrice(l.soldPriceHalfM || 0)}</span>
-                                            </p>
-                                          ))}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <ManagerBudgetPanel
+                            key={manager.id}
+                            manager={manager}
+                            allocatedPlayers={allocatedPlayers}
+                          />
                         )
                       })}
                     </div>
@@ -788,55 +922,18 @@ export default function AuctionRoomPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {(isAdmin ? managers : managers.filter(m => m.id === session?.user?.id)).map(manager => {
+                  {managers.filter(m => m.id === session?.user?.id).map(manager => {
                     const allocatedPlayers = auction?.lots.filter(lot => 
                       lot.isSold && lot.winnerId === manager.id
                     ) || []
-                    const totalSpent = allocatedPlayers.reduce((sum, lot) => 
-                      sum + (lot.soldPriceHalfM || 0), 0
-                    )
-                    // Budget terminology: Budget (starting £150m) - Spent = Remaining
-                    const budget = manager.budgetKGBP // Starting budget (£150m)
-                    const remainingBudget = budget - (totalSpent * 500)
-                    
                     return (
-                      <div key={manager.id} className="p-3 border rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-medium text-sm">{manager.username}</p>
-                          </div>
-                          <Badge variant="outline">
-                            {formatPrice(remainingBudget / 500)}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          <p>Spent: {formatPrice(totalSpent)}</p>
-                          <p>Players: {allocatedPlayers.length}</p>
-                        </div>
-                        {allocatedPlayers.length > 0 && (
-                          <div className="mt-3">
-                            <p className="text-xs font-medium text-gray-700 mb-2">Players:</p>
-                            <div className="grid grid-cols-4 gap-2">
-                              {(['GK','DEF','MID','FWD'] as const).map(pos => (
-                                <div key={pos} className="border rounded p-2">
-                                  <p className="text-[10px] font-semibold mb-1">{pos}</p>
-                                  <div className="space-y-1">
-                                    {allocatedPlayers
-                                      .filter(l => l.player.elementType === pos)
-                                      .sort((a,b) => (a.player.webName || a.player.secondName).localeCompare(b.player.webName || b.player.secondName))
-                                      .map(l => (
-                                        <p key={l.id} className="text-[10px] text-gray-700 truncate flex justify-between gap-2">
-                                          <span>{(l.player.webName || l.player.secondName)}</span>
-                                          <span className="text-gray-500">{formatPrice(l.soldPriceHalfM || 0)}</span>
-                                        </p>
-                                      ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <ManagerBudgetPanel
+                        key={manager.id}
+                        manager={manager}
+                        allocatedPlayers={allocatedPlayers}
+                        pendingBidHalfM={myPendingBidHalfM}
+                        showUsername={false}
+                      />
                     )
                   })}
                 </div>
