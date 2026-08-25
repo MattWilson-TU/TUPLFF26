@@ -23,6 +23,7 @@ from openpyxl.styles import Font
 
 BOOTSTRAP_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
 ELEMENT_SUMMARY_URL = "https://fantasy.premierleague.com/api/element-summary/{player_id}/"
+DEFAULT_OUTPUT_DIR = Path("/Users/matt/Desktop/FPL26-27 data")
 HEADERS = {
     "User-Agent": "FPL-Player-Export/1.0 (local script; personal use)",
     "Accept": "application/json",
@@ -69,9 +70,11 @@ def build_rows(bootstrap: dict, last_season_by_id: dict[int, int | None]) -> lis
                 "Player ID": player_id,
                 "First Name": player.get("first_name", ""),
                 "Surname": player.get("second_name", ""),
+                "Webname": player.get("web_name", ""),
                 "Team": teams.get(player["team"], ""),
                 "Position": positions.get(player["element_type"], ""),
                 "NowCost": player["now_cost"] / 10.0,
+                "This Seasons Points": player.get("total_points"),
                 "Last Seasons Total": last_season_by_id.get(player_id),
             }
         )
@@ -88,9 +91,11 @@ def write_xlsx(rows: list[dict], output_path: Path) -> None:
         "Player ID",
         "First Name",
         "Surname",
+        "Webname",
         "Team",
         "Position",
         "NowCost",
+        "This Seasons Points",
         "Last Seasons Total",
     ]
     ws.append(headers)
@@ -102,16 +107,18 @@ def write_xlsx(rows: list[dict], output_path: Path) -> None:
 
     # NowCost as one decimal place (e.g. 6.0 for £6.0m)
     for excel_row in range(2, len(rows) + 2):
-        ws.cell(row=excel_row, column=6).number_format = "0.0"
+        ws.cell(row=excel_row, column=7).number_format = "0.0"
 
     widths = {
         "A": 12,
         "B": 16,
         "C": 22,
         "D": 16,
-        "E": 12,
-        "F": 10,
-        "G": 20,
+        "E": 16,
+        "F": 12,
+        "G": 10,
+        "H": 20,
+        "I": 20,
     }
     for col, width in widths.items():
         ws.column_dimensions[col].width = width
@@ -128,7 +135,10 @@ def parse_args() -> argparse.Namespace:
         "--output",
         type=Path,
         default=None,
-        help="Output .xlsx path (default: fpl_players_YYYYMMDD_HHMMSS.xlsx)",
+        help=(
+            "Output .xlsx path "
+            f"(default: {DEFAULT_OUTPUT_DIR}/fpl_players_YYYYMMDD_HHMMSS.xlsx)"
+        ),
     )
     parser.add_argument(
         "-w",
@@ -143,7 +153,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    output_path = args.output or Path(f"fpl_players_{stamp}.xlsx")
+    output_path = args.output or (DEFAULT_OUTPUT_DIR / f"fpl_players_{stamp}.xlsx")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     print("Fetching bootstrap-static...")
     with requests.Session() as session:
