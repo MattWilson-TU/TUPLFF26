@@ -23,6 +23,8 @@ export default function AdminPage() {
   const [uploadProgress, setUploadProgress] = useState<string>('')
   const [isCloudUpdating, setIsCloudUpdating] = useState(false)
   const [cloudUpdateProgress, setCloudUpdateProgress] = useState<string>('')
+  const [isResyncingAuctionLog, setIsResyncingAuctionLog] = useState(false)
+  const [auctionLogSheetUrl, setAuctionLogSheetUrl] = useState('')
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin')
@@ -30,7 +32,16 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (session?.user?.username !== 'Admin01') router.push('/dashboard')
-    else fetchUsers()
+    else {
+      fetchUsers()
+      fetch('/api/admin/auction-log?format=json')
+        .then(async (res) => {
+          if (!res.ok) return
+          const data = await res.json()
+          if (data.sheetUrl) setAuctionLogSheetUrl(data.sheetUrl)
+        })
+        .catch(() => {})
+    }
   }, [session])
 
   async function fetchUsers() {
@@ -224,6 +235,57 @@ export default function AdminPage() {
     }
   }
 
+  async function downloadAuctionLogXlsx() {
+    try {
+      const res = await fetch('/api/admin/auction-log?format=xlsx')
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}))
+        alert(error.error || 'Failed to download auction log')
+        return
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'auction-log.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading auction log:', error)
+      alert('Failed to download auction log')
+    }
+  }
+
+  async function resyncAuctionLogSheet() {
+    try {
+      setIsResyncingAuctionLog(true)
+      const res = await fetch('/api/admin/auction-log', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || 'Failed to resync Google Sheet')
+        return
+      }
+      if (data.skipped) {
+        alert('AUCTION_LOG_SHEET_ID is not configured. Set it in env to enable Google Sheet sync.')
+        return
+      }
+      if (!data.ok) {
+        alert(`Sheet sync failed: ${data.error || 'unknown error'}`)
+        return
+      }
+      if (data.sheetUrl) setAuctionLogSheetUrl(data.sheetUrl)
+      alert(`Google Sheet resynced successfully (${data.rows} rows).`)
+    } catch (error) {
+      console.error('Error resyncing auction log:', error)
+      alert('Failed to resync Google Sheet')
+    } finally {
+      setIsResyncingAuctionLog(false)
+    }
+  }
+
   async function cloudUpdateFPLData() {
     if (!confirm('Are you sure you want to trigger a cloud update? This will download the latest FPL data and update the database.')) {
       return
@@ -363,7 +425,7 @@ export default function AdminPage() {
                 <Input placeholder="Password" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
                 <Button onClick={createUser}>Create</Button>
               </div>
-              <div className="flex gap-2 ml-4">
+              <div className="flex flex-wrap gap-2 ml-4">
                 <Button 
                   onClick={addBudgetToAll} 
                   variant="outline" 
@@ -378,6 +440,32 @@ export default function AdminPage() {
                 >
                   📊 Export Teams CSV
                 </Button>
+                <Button
+                  onClick={downloadAuctionLogXlsx}
+                  variant="outline"
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                >
+                  📥 Auction Log (.xlsx)
+                </Button>
+                <Button
+                  onClick={resyncAuctionLogSheet}
+                  disabled={isResyncingAuctionLog}
+                  variant="outline"
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                >
+                  {isResyncingAuctionLog ? 'Resyncing…' : '🔄 Resync Google Sheet'}
+                </Button>
+                {auctionLogSheetUrl ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200"
+                  >
+                    <a href={auctionLogSheetUrl} target="_blank" rel="noopener noreferrer">
+                      ↗ Open Google Sheet
+                    </a>
+                  </Button>
+                ) : null}
               </div>
             </div>
 

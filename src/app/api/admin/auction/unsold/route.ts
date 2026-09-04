@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { syncAuctionLogToSheet } from '@/lib/auction-log'
 import { z } from 'zod'
 
 const unsoldSchema = z.object({
@@ -79,6 +80,11 @@ export async function POST(request: NextRequest) {
           },
         })
       }
+    })
+
+    // Post-commit side-effect: rebuild live auction log sheet (does not affect auction mechanics)
+    after(() => {
+      void syncAuctionLogToSheet(lot.auctionId)
     })
 
     return NextResponse.json({ success: true })

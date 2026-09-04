@@ -39,6 +39,10 @@ steps:
       '--update-env-vars', 'NEXTAUTH_URL=https://app.tuplff.co.uk',
       '--update-env-vars', 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID',
       '--update-env-vars', 'DATABASE_URL=${_DATABASE_URL}',
+      # Live auction log Google Sheet (override via substitutions if needed)
+      '--update-env-vars', 'AUCTION_LOG_SHEET_ID=${_AUCTION_LOG_SHEET_ID}',
+      '--update-env-vars', 'AUCTION_LOG_SHEET_TAB=${_AUCTION_LOG_SHEET_TAB}',
+      '--update-env-vars', 'NEXT_PUBLIC_AUCTION_LOG_SHEET_URL=${_AUCTION_LOG_SHEET_URL}',
       '--add-cloudsql-instances', 'tuplff25-26:europe-west2:fpl-auction-db'
     ]
 
@@ -52,3 +56,7 @@ substitutions:
   #   gcloud builds submit --config cloudbuild.yaml \
   #     --substitutions=_DATABASE_URL="postgresql://fpluser:Simple123@localhost:5432/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db"
   _DATABASE_URL: 'postgresql://fpluser:Simple123@localhost:5432/fpl_auction?host=/cloudsql/tuplff25-26:europe-west2:fpl-auction-db'
+  # Set these after creating the auction log Google Sheet and sharing it with the Cloud Run SA
+  _AUCTION_LOG_SHEET_ID: ''
+  _AUCTION_LOG_SHEET_TAB: 'Auction Log'
+  _AUCTION_LOG_SHEET_URL: ''

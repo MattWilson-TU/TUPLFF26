@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { syncAuctionLogToSheet } from '@/lib/auction-log'
 import { z } from 'zod'
 
 const allocationSchema = z.object({
@@ -141,6 +142,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Perform the bulk allocation in a transaction
+    let syncedAuctionId: string | null = null
+
     await prisma.$transaction(async (tx) => {
       // Find or create squad for this phase
       let squad = await tx.squad.findFirst({
@@ -205,6 +208,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (auction) {
+        syncedAuctionId = auction.id
         // For Phase 1, we need to handle budget tracking differently
         // For now, we'll create auction lots for the new allocations
         if (allocations.length > 0) {
@@ -220,6 +224,13 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Post-commit side-effect: rebuild live auction log sheet (does not affect auction mechanics)
+    if (syncedAuctionId) {
+      after(() => {
+        void syncAuctionLogToSheet(syncedAuctionId!)
+      })
+    }
 
     return NextResponse.json({ 
       success: true, 

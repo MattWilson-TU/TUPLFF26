@@ -14,6 +14,7 @@ A complete web application for managing fantasy football auctions and seasons, b
 - **League Table**: Real-time standings and statistics
 - **Player Database**: Comprehensive player search and analysis
 - **Admin Panel**: Complete management interface for auctions and users
+- **Live Auction Log**: Google Sheet + .xlsx export updated after each sold/unsold lot
 
 ### Technical Features
 - **Responsive Design**: Mobile-first with Tailwind CSS
@@ -390,7 +391,31 @@ DB_PORT=5432
 
 # Additional NextAuth configuration
 NEXTAUTH_DEBUG=true
+
+# Live auction log (Google Sheet sync + admin .xlsx download)
+AUCTION_LOG_SHEET_ID="1abc...xyz"
+AUCTION_LOG_SHEET_TAB="Auction Log"
+NEXT_PUBLIC_AUCTION_LOG_SHEET_URL="https://docs.google.com/spreadsheets/d/1abc...xyz/edit"
+# Local only — Cloud Run uses Application Default Credentials
+# GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
 ```
+
+### Live Auction Log setup (one-time)
+
+After each sold or unsold lot the app rebuilds a Google Sheet with columns:
+`ID | First Name | Surname | Web Name | Position | Fee (£m) | Manager`.
+Unsold lots use fee `0` and manager `UNSOLD`. Failures never block the auction.
+
+1. Create a Google Sheet with a tab named **Auction Log**; copy the spreadsheet ID from the URL.
+2. In GCP project `tuplff25-26`, enable the **Google Sheets API**.
+3. Share the sheet (**Editor**) with the Cloud Run service account
+   (e.g. `884572147716-compute@developer.gserviceaccount.com`).
+4. Set `AUCTION_LOG_SHEET_ID` / `NEXT_PUBLIC_AUCTION_LOG_SHEET_URL` (and optionally
+   `_AUCTION_LOG_SHEET_ID` / `_AUCTION_LOG_SHEET_URL` substitutions in `cloudbuild.yaml`).
+5. For local testing: create a service-account key JSON, put it in
+   `GOOGLE_SERVICE_ACCOUNT_JSON`, and share the sheet with that account.
+6. On auction day keep the sheet open in a browser tab; use **Resync Google Sheet**
+   or **Auction Log (.xlsx)** on the admin page as needed.
 
 ## Troubleshooting
 
